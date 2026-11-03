@@ -59,6 +59,13 @@ h2{font-size:22px;font-weight:700;text-transform:uppercase;margin:28px 0 12px}
 .zone b{font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;line-height:1.05}
 .zone .cnt{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
 .zone .mus{color:var(--muted);font-size:12px;line-height:1.3}
+.zones.pair{grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))}
+.zone.sp{border-left:4px solid var(--accent)}
+.zone .when{display:block;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;margin-bottom:12px}
+.plan h4{font-size:16px;font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.plan ol{margin:0;padding-left:20px}
+.plan li{margin:4px 0;font-size:15px}
 
 /* chips y filtros */
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
@@ -336,8 +343,47 @@ const GOALS = {
   perder:{name:'Perder grasa', sets:'3', reps:'12–15', rest:'45–60 s'}
 };
 const LEVELS = {principiante:'Principiante', intermedio:'Intermedio', avanzado:'Avanzado'};
+/* ---------- Calentamiento y elongación (selección curada del dataset) ---------- */
+const SPECIAL = {
+  calentamiento:{
+    name:'Calentamiento', when:'Antes de entrenar', mus:'Sube la temperatura y prepara articulaciones y músculos',
+    plan:['3–5 min de cardio suave: trote, cuerda, elíptica o bicicleta.',
+          'Movilidad: 30–45 s por articulación (tobillos, rodillas, cadera, columna, hombros, muñecas).',
+          '2–3 ejercicios de activación para la zona que vas a entrenar.',
+          '1–2 series de aproximación del primer ejercicio con poco peso.'],
+    tips:{do:['Empieza suave y ve subiendo el ritmo: al terminar deberías sentir calor y respirar un poco más rápido.','Prefiere movimientos dinámicos y controlados, sin rebotes.','Elige la activación según el día: zancadas y puentes para piernas, flexiones de brazos y aperturas para el tren superior.'],
+          avoid:['Saltarte el calentamiento cuando vas a levantar pesado.','Cansarte antes de entrenar: el calentamiento prepara, no agota.','Hacer estiramientos estáticos largos justo antes de levantar: déjalos para el final.']},
+    groups:[
+      {name:'Cardio suave', ids:['0685','3656','2612','3224','3636','3221','2141','2138','2311']},
+      {name:'Movilidad', ids:['1368','0257','1428','1418','3639','1167']},
+      {name:'Activación', ids:['1471','1604','1685','1686','1687','1688','1460','3655','0628','3561','0630','3360']}
+    ]},
+  elongacion:{
+    name:'Elongación', when:'Después de entrenar', mus:'Estiramientos para soltar tensión y ganar flexibilidad',
+    plan:['Al terminar, con el cuerpo aún caliente: 5–10 min.',
+          'Estira sobre todo los músculos que trabajaste hoy.',
+          'Mantén cada posición 20–30 s, 2 veces por lado.',
+          'Respira lento y profundo; en cada exhalación cede un poco más.'],
+    tips:{do:['Busca una tensión suave y tolerable, nunca dolor.','Mantén la posición quieta, sin rebotar.','Respira lento: soltar el aire ayuda a relajar el músculo.','Haz siempre ambos lados por igual.'],
+          avoid:['Rebotar para llegar más lejos.','Forzar una articulación o estirar con dolor agudo.','Contener la respiración.']},
+    groups:[
+      {name:'Piernas', ids:['1512','1713','1548','1564','0613','1560','1511','1576','1585','1599','1708','1407','1377','1378','1388','1389','1390','1398','1712','1494']},
+      {name:'Glúteos y cadera', ids:['1709','1710','1714','1559','1419','2571','2205','2202','1424','2567']},
+      {name:'Espalda', ids:['1405','1339','1341','1342','1346','0690','1358','0794','2207','2208','1363','1365']},
+      {name:'Pecho y hombros', ids:['1716','1259','1271','1272','0669']},
+      {name:'Brazos', ids:['1745','0643','0817','0721']},
+      {name:'Cuello', ids:['1403','0716']}
+    ]}
+};
+const KIND = {};
+for(const [kind, s] of Object.entries(SPECIAL)) for(const g of s.groups) for(const id of g.ids) KIND[id] = {kind, group:g.name};
+
 function prescription(e){
-  const p = state.profile;
+  const p = state.profile, k = KIND[e.i];
+  if(k && k.kind==='calentamiento') return k.group==='Cardio suave'
+    ? {sets:'1', reps:'3–5′', rest:'Suave', restLabel:'Ritmo', unit:'Duración'}
+    : {sets:'1', reps:'30–45 s', rest:'Sin pausa', unit:'Tiempo'};
+  if(k && k.kind==='elongacion') return {sets:'2', reps:'20–30 s', rest:'Ambos', restLabel:'Lados', unit:'Mantener'};
   if(e.c==='cardio') return {sets:p.level==='principiante'?'1':'1–2', reps:p.goal==='perder'?'20–30′':'10–20′', rest:'Constante', unit:'Duración'};
   const g = GOALS[p.goal] || GOALS.hipertrofia;
   return {sets:p.level==='principiante'?g.sets.split('–')[0]:g.sets, reps:g.reps, rest:g.rest, unit:'Reps'};
@@ -417,8 +463,23 @@ function applyFilters(base){
   return base.filter(e => (!view.target || e.t===view.target) && (!view.equip || e.q===view.equip) && equipOk(e) && (!q || searchable(e).includes(q)));
 }
 
+function renderSpecial(id){
+  const s = SPECIAL[id], q = norm(view.q.trim());
+  const groups = s.groups.filter(g => !view.target || g.name===view.target);
+  const list = groups.flatMap(g => g.ids).map(i => byId[i]).filter(e => e && equipOk(e) && (!q || searchable(e).includes(q)));
+  app.innerHTML = `<button class="back" data-back>← Inicio</button>
+    <div class="top"><div><h1>${esc(s.name)}</h1><div class="sub">${esc(s.when)} · ${esc(s.mus)}</div></div></div>
+    <div class="plan"><h4>Cómo hacerlo</h4><ol>${s.plan.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>
+    <input class="search" id="q" data-q placeholder="Buscar en ${esc(s.name.toLowerCase())}…" value="${esc(view.q)}" autocomplete="off">
+    <div class="chips" style="margin-top:12px">
+      <button class="chip ${!view.target?'on':''}" data-target="">Todos</button>
+      ${s.groups.map(g=>`<button class="chip ${view.target===g.name?'on':''}" data-target="${esc(g.name)}">${esc(g.name)}</button>`).join('')}</div>
+    ${listHTML(list)}`;
+}
+
 function renderHome(){
   const p = state.profile;
+  if(view.zone && SPECIAL[view.zone]){ renderSpecial(view.zone); return; }
   if(view.zone){
     const z = ZONES.find(z=>z.id===view.zone);
     const base = EX.filter(z.match);
@@ -433,6 +494,9 @@ function renderHome(){
       <div class="sub">${p.name?`Hola, ${esc(p.name)} · `:''}${esc(GOALS[p.goal].name)} · ${esc(LEVELS[p.level])}</div></div></div>
     <input class="search" id="gq" data-gq placeholder="Buscar ejercicio, músculo o equipo…" autocomplete="off">
     ${todayHTML()}
+    <h2>Antes y después</h2>
+    <div class="zones pair">${Object.entries(SPECIAL).map(([id,s])=>{ const n = s.groups.reduce((a,g)=>a+g.ids.length,0);
+      return `<button class="zone sp" data-zone="${id}"><div><span class="when">${esc(s.when)}</span><b>${esc(s.name)}</b><div class="mus">${esc(s.mus)}</div></div><span class="cnt">${n} ejercicios</span></button>`; }).join('')}</div>
     <h2>¿Qué entrenas hoy?</h2>
     <div class="zones">${ZONES.map(z=>{ const n = EX.filter(e=>z.match(e)&&equipOk(e)).length;
       return `<button class="zone" data-zone="${z.id}"><div><b>${esc(z.name)}</b><div class="mus">${esc(z.mus)}</div></div><span class="cnt">${n} ejercicios</span></button>`; }).join('')}</div>
@@ -539,13 +603,15 @@ function openDetail(id, keep){
   const e = byId[id]; if(!e) return;
   if(!keep) pickOpen = false;
   openId = id;
-  const rx = prescription(e), t = TIPS[e.t] || {do:[],avoid:[]}, eqTip = EQ_TIPS[e.q];
+  const k = KIND[id], rx = prescription(e);
+  const t = k ? SPECIAL[k.kind].tips : (TIPS[e.t] || {do:[],avoid:[]});
+  const extra = k ? [] : [...(EQ_TIPS[e.q] ? [EQ_TIPS[e.q]] : []), ...GENERAL_DO];
   const inDays = DAYS.filter(d=>state.routine[d].includes(id)), f = isFav(id);
   $('#sheetBox').innerHTML = `
     <div class="hd"><h3>${esc(e.n)}</h3><button class="x" data-close aria-label="Cerrar">✕</button></div>
     <div class="anim" id="anim"><span class="muted small" id="animMsg">Cargando animación…</span></div>
-    <div class="tags"><span class="tag a">${esc(tr(TARGET,e.t))}</span><span class="tag">${esc(tr(EQUIP,e.q))}</span>${e.s.map(m=>`<span class="tag">${esc(tr(MUSCLE,m))}</span>`).join('')}</div>
-    <div class="rx"><div><b>${rx.sets}</b><span>Series</span></div><div><b>${rx.reps}</b><span>${rx.unit}</span></div><div><b>${rx.rest}</b><span>Descanso</span></div></div>
+    <div class="tags">${k?`<span class="tag a">${esc(SPECIAL[k.kind].name)} · ${esc(k.group)}</span>`:''}<span class="tag ${k?'':'a'}">${esc(tr(TARGET,e.t))}</span><span class="tag">${esc(tr(EQUIP,e.q))}</span>${e.s.map(m=>`<span class="tag">${esc(tr(MUSCLE,m))}</span>`).join('')}</div>
+    <div class="rx"><div><b>${rx.sets}</b><span>Series</span></div><div><b>${rx.reps}</b><span>${rx.unit}</span></div><div><b>${rx.rest}</b><span>${rx.restLabel||'Descanso'}</span></div></div>
     <div class="actions">
       <button class="btn pri" data-addr>${inDays.length?'En tu rutina: '+inDays.map(d=>d.slice(0,3)).join(', '):'＋ Añadir a rutina'}</button>
       <button class="btn" data-fav="${e.i}">${f?'★ Favorito':'☆ Favorito'}</button>
@@ -554,7 +620,7 @@ function openDetail(id, keep){
       <div class="seg">${DAYS.map(d=>`<button class="chip ${inDays.includes(d)?'on':''}" data-addday="${d}">${d}</button>`).join('')}</div></div>`:''}
     <h4 class="sec">Cómo hacerlo</h4>
     <ol class="steps">${e.p.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
-    <div class="tips"><h4>Consejos</h4><ul>${[...t.do, ...(eqTip?[eqTip]:[]), ...GENERAL_DO].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+    <div class="tips"><h4>Consejos</h4><ul>${[...t.do, ...extra].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     ${t.avoid.length?`<div class="tips warn"><h4>Errores comunes</h4><ul>${t.avoid.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
     <p class="muted small" style="margin-top:16px">Si sientes dolor (distinto de la fatiga muscular), detente. Consulta a un profesional si tienes lesiones. Animación © Gym visual.</p>`;
   if($('#sheet').hidden){ $('#sheet').hidden = false; $('#sheetBox').scrollTop = 0; document.body.style.overflow = 'hidden'; }
