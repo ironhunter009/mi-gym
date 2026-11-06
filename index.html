@@ -146,6 +146,33 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .ib{background:none;border:0;color:var(--muted);font-size:18px;padding:6px}
 .progress{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:8px}
 .progress i{display:block;height:100%;background:var(--accent)}
+.ritem{flex-wrap:wrap}
+.rlog{flex-basis:100%;display:flex;align-items:center;gap:10px;min-width:0}
+
+/* registro y progreso */
+.logbox{background:var(--surface2);border-radius:12px;padding:12px}
+.logtop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logbox input{min-width:0;width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-variant-numeric:tabular-nums}
+.logtop input{width:auto}
+.lsets{display:grid;gap:6px 8px;align-items:center;margin-top:10px}
+.lsets.weight{grid-template-columns:20px minmax(0,1fr) 12px minmax(0,1fr) 32px}
+.lsets.time{grid-template-columns:20px minmax(0,1fr) 32px}
+.lh{font-size:12px;color:var(--muted)}
+.ln-n{font-family:var(--f-display);font-weight:700;text-align:center}
+.chart{position:relative;touch-action:pan-y}
+.chart svg{display:block;max-width:100%}
+.grid{stroke:var(--line);stroke-width:1}
+.ax{fill:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.val{fill:var(--ink);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.xh{stroke:var(--muted);stroke-width:1}
+.tip{position:absolute;top:0;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap;pointer-events:none}
+.lhist{margin-top:8px}
+.lrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.lrow .info{flex:1;min-width:0;background:none;border:0;text-align:left;padding:0;display:flex;flex-direction:column}
+.spark{flex:none;margin-right:6px}
+.spark .dot{stroke:var(--surface)}
 
 /* perfil */
 .form{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
@@ -394,7 +421,7 @@ const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Doming
 const KEY = 'migym.v1';
 const fresh = () => ({
   profile:{name:'', goal:'hipertrofia', level:'principiante', equip:[], onlyMine:false},
-  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}
+  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}, log:{}
 });
 function normalize(s){
   const base = fresh();
@@ -403,7 +430,8 @@ function normalize(s){
     profile:Object.assign(base.profile, s.profile||{}),
     favs:Array.isArray(s.favs)?s.favs:[],
     routine:Object.assign(base.routine, s.routine||{}),
-    done:(s.done && typeof s.done==='object')?s.done:{}
+    done:(s.done && typeof s.done==='object')?s.done:{},
+    log:(s.log && typeof s.log==='object')?s.log:{}
   };
 }
 let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY))); }catch(_){ return fresh(); } })();
@@ -411,10 +439,11 @@ let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY)));
 /* Se guarda en este dispositivo; para pasarlo a otro, Perfil > Copia de seguridad */
 function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(_){} }
 const save = saveLocal;
-const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine}))));
+const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log}))));
 function restoreCode(code){
   const s = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   if(!s || !s.routine) throw new Error('formato');
+  if(!s.log) s.log = state.log; /* los códigos antiguos no traen registros: se conservan los de este dispositivo */
   state = normalize(s); save();
 }
 
@@ -528,13 +557,27 @@ function routineItem(d, id){
     <img class="th sm" data-th="${e.i}" alt="" data-open="${e.i}">
     <button class="info" data-open="${e.i}"><b>${esc(e.n)}</b><span class="muted small">${rx.sets} × ${rx.reps} · ${rx.rest}</span></button>
     <button class="ib" data-up="${esc(d)}|${id}" aria-label="Subir">↑</button>
-    <button class="ib" data-rm="${esc(d)}|${id}" aria-label="Quitar">✕</button></div>`;
+    <button class="ib" data-rm="${esc(d)}|${id}" aria-label="Quitar">✕</button>
+    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}">Registrar</button><span class="small muted">${esc(logLine(id))}</span></div>`:''}</div>`;
+}
+function logLine(id){
+  const ss = sessions(id); if(!ss.length) return '';
+  const last = ss[ss.length-1];
+  return last.d===isoDate() ? `Hoy: ${last.s.length} ${last.s.length===1?'serie':'series'}` : `Última vez: ${setText(bestSet(last))}`;
 }
 let confirmClear = false;
 function renderRoutine(){
   const any = DAYS.some(d=>state.routine[d].length);
+  const tabs = `<div class="chips" style="margin-bottom:10px">
+    <button class="chip ${view.sub!=='progreso'?'on':''}" data-sub="semana">Semana</button>
+    <button class="chip ${view.sub==='progreso'?'on':''}" data-sub="progreso">Progreso</button></div>`;
+  if(view.sub==='progreso'){
+    app.innerHTML = `<div class="top"><h1>Mi rutina</h1></div>${tabs}${renderProgress()}`;
+    return;
+  }
   app.innerHTML = `<div class="top"><div><h1>Mi rutina</h1>
     <div class="sub">Series y repeticiones para <b>${esc(GOALS[state.profile.goal].name)}</b>, nivel ${esc(LEVELS[state.profile.level].toLowerCase())}. Cámbialo en Perfil.</div></div></div>
+    ${tabs}
     ${!any?`<div class="empty">Tu rutina está vacía.<br>Abre un ejercicio y pulsa <b>Añadir a rutina</b>.</div>`:''}
     ${any?DAYS.map(d=>{ const ids = state.routine[d];
       if(!ids.length) return `<div class="day"><div class="dh"><h4>${d}</h4><span class="muted small">Descanso</span></div></div>`;
@@ -573,7 +616,7 @@ function renderProfile(){
     </div>
     <h2>Copia de seguridad</h2>
     <div class="form">
-      <p class="muted small" style="margin:0 0 10px">Tu rutina, favoritos y perfil se guardan en este dispositivo. Para pasarlos a otro, copia el código aquí y pégalo en la app del otro dispositivo.</p>
+      <p class="muted small" style="margin:0 0 10px">Tu rutina, registros, favoritos y perfil se guardan en este dispositivo. Para pasarlos a otro, copia el código aquí y pégalo en la app del otro dispositivo.</p>
       <div class="row" style="margin-top:0"><button class="btn sm" data-backup="copy">Copiar mi código</button></div>
       <label class="f" for="restore">Pegar código de otro dispositivo</label>
       <input type="text" id="restore" placeholder="Pega aquí el código" autocomplete="off">
@@ -597,11 +640,173 @@ function render(){
   hydrateThumbs(app);
 }
 
+/* ---------- Registro de entrenos ----------
+   state.log[idEjercicio] = [{d:'AAAA-MM-DD', s:[{w:kg, r:reps} | {m:minutos}]}], ordenado por fecha */
+const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const isoDate = (t = new Date()) => `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+const fmtDate = d => { const [, m, day] = d.split('-'); return `${+day} ${MONTHS[+m-1]}`; };
+const fmtNum = n => String(Math.round(n*100)/100).replace('.', ',');
+const logType = e => KIND[e.i] ? null : (e.c==='cardio' ? 'time' : 'weight');
+const validSet = s => s.m>0 || s.w>0 || s.r>0;
+const entryFor = (id, d) => (state.log[id]||[]).find(x => x.d===d);
+const sessions = id => (state.log[id]||[]).map(x => ({d:x.d, s:x.s.filter(validSet)})).filter(x => x.s.length);
+const lastBefore = (id, d) => sessions(id).filter(x => x.d<d).pop();
+const setText = s => s.m>0 ? `${fmtNum(s.m)} min` : s.w>0 ? `${fmtNum(s.w)} kg${s.r>0?` × ${s.r}`:''}` : `${s.r} reps`;
+const sessionText = x => x.s.map(setText).join(' · ');
+const bestSet = x => x.s.reduce((a,b) => ((b.m||0)+(b.w||0)*1000+(b.r||0)/1000 > (a.m||0)+(a.w||0)*1000+(a.r||0)/1000 ? b : a));
+function metric(id){
+  const ss = sessions(id), e = byId[id];
+  if(logType(e)==='time') return {title:'Minutos por sesión', unit:'min', pts:ss.map(x=>({d:x.d, v:x.s.reduce((a,s)=>a+(s.m||0),0)}))};
+  if(ss.some(x=>x.s.some(s=>s.w>0))) return {title:'Mejor peso por sesión', unit:'kg', pts:ss.filter(x=>x.s.some(s=>s.w>0)).map(x=>({d:x.d, v:Math.max(...x.s.map(s=>s.w||0))}))};
+  return {title:'Mejores repeticiones por sesión', unit:'reps', pts:ss.map(x=>({d:x.d, v:Math.max(...x.s.map(s=>s.r||0))}))};
+}
+function pruneLog(id){
+  if(!state.log[id]) return;
+  state.log[id] = sessions(id);
+  if(!state.log[id].length) delete state.log[id];
+  save();
+}
+function addSet(id, blank){
+  const list = state.log[id] || (state.log[id] = []);
+  let en = entryFor(id, logDate);
+  if(!en){ en = {d:logDate, s:[]}; list.push(en); list.sort((a,b)=>a.d<b.d?-1:1); }
+  const prev = blank ? null : en.s[en.s.length-1];
+  en.s.push(logType(byId[id])==='time' ? {m:prev?prev.m:null} : {w:prev?prev.w:null, r:prev?prev.r:null});
+  save();
+}
+function weekStats(){
+  const now = new Date(), mon = new Date(now);
+  mon.setDate(now.getDate() - (now.getDay()+6)%7);
+  const from = isoDate(mon), days = new Set();
+  let sets = 0, kg = 0;
+  for(const id of Object.keys(state.log)) for(const x of sessions(id)) if(x.d>=from){
+    days.add(x.d); sets += x.s.length;
+    for(const s of x.s) kg += (s.w||0)*(s.r||0);
+  }
+  return {days:days.size, sets, kg};
+}
+
+/* Gráfico de línea: una serie, eje de fechas real, toque o cursor para leer cada punto */
+function niceTicks(min, max){
+  if(min===max){ min -= 1; max += 1; }
+  const raw = (max-min)/3, pow = 10**Math.floor(Math.log10(raw));
+  const step = [1,2,2.5,5,10].map(x=>x*pow).find(x=>x>=raw);
+  const lo = Math.max(0, Math.floor(min/step)*step), hi = Math.ceil(max/step)*step, out = [];
+  for(let v=lo; v<=hi+step/1000; v+=step) out.push(v);
+  return out;
+}
+function lineChart(el, m){
+  const pts = m.pts, W = Math.max(260, el.clientWidth||320), H = 170, L = 36, R = 14, T = 26, B = 24;
+  const ticks = niceTicks(Math.min(...pts.map(p=>p.v)), Math.max(...pts.map(p=>p.v)));
+  const lo = ticks[0], hi = ticks[ticks.length-1];
+  const t0 = Date.parse(pts[0].d), t1 = Date.parse(pts[pts.length-1].d);
+  const X = p => t1===t0 ? (L+W-R)/2 : L + (Date.parse(p.d)-t0)/(t1-t0)*(W-L-R);
+  const Y = v => H-B - (v-lo)/(hi-lo)*(H-T-B);
+  const end = pts[pts.length-1];
+  el.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(m.title)}: de ${fmtNum(pts[0].v)} a ${fmtNum(end.v)} ${m.unit}">
+    ${ticks.map(v=>`<line class="grid" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+4}" text-anchor="end">${fmtNum(v)}</text>`).join('')}
+    <text class="ax" x="${L}" y="${H-6}">${fmtDate(pts[0].d)}</text>
+    ${pts.length>1?`<text class="ax" x="${W-R}" y="${H-6}" text-anchor="end">${fmtDate(end.d)}</text>`:''}
+    <line class="xh" y1="${T}" y2="${H-B}" visibility="hidden"/>
+    ${pts.length>1?`<polyline class="ln" points="${pts.map(p=>`${X(p)},${Y(p.v)}`).join(' ')}"/>`:''}
+    <circle class="dot" cx="${X(end)}" cy="${Y(end.v)}" r="5"/>
+    <circle class="dot cur" r="5" visibility="hidden"/>
+    <text class="val" x="${Math.min(X(end), W-R)}" y="${Y(end.v)-11}" text-anchor="${pts.length>1?'end':'middle'}">${fmtNum(end.v)} ${m.unit}</text>
+  </svg><div class="tip" hidden></div>`;
+  const svg = el.firstElementChild, tip = el.querySelector('.tip'), xh = el.querySelector('.xh'), cur = el.querySelector('.cur');
+  const show = ev => {
+    const x = ev.clientX - svg.getBoundingClientRect().left;
+    const p = pts.reduce((a,b) => Math.abs(X(b)-x) < Math.abs(X(a)-x) ? b : a);
+    xh.setAttribute('x1', X(p)); xh.setAttribute('x2', X(p)); xh.setAttribute('visibility', 'visible');
+    cur.setAttribute('cx', X(p)); cur.setAttribute('cy', Y(p.v)); cur.setAttribute('visibility', 'visible');
+    tip.textContent = `${fmtDate(p.d)} · ${fmtNum(p.v)} ${m.unit}`; tip.hidden = false;
+    tip.style.left = Math.max(0, Math.min(X(p) - tip.offsetWidth/2, W - tip.offsetWidth)) + 'px';
+  };
+  const hide = () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); cur.setAttribute('visibility', 'hidden'); };
+  svg.addEventListener('pointerdown', show);
+  svg.addEventListener('pointermove', show);
+  svg.addEventListener('pointerleave', hide);
+}
+function sparkline(pts){
+  if(pts.length<2) return '';
+  const W = 72, H = 30, P = 5, vs = pts.map(p=>p.v), lo = Math.min(...vs), hi = Math.max(...vs);
+  const t0 = Date.parse(pts[0].d), t1 = Date.parse(pts[pts.length-1].d);
+  const X = p => P + (Date.parse(p.d)-t0)/((t1-t0)||1)*(W-2*P);
+  const Y = v => hi===lo ? H/2 : H-P - (v-lo)/(hi-lo)*(H-2*P);
+  const end = pts[pts.length-1];
+  return `<svg class="spark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline class="ln" points="${pts.map(p=>`${X(p)},${Y(p.v)}`).join(' ')}"/><circle class="dot" cx="${X(end)}" cy="${Y(end.v)}" r="4"/></svg>`;
+}
+
+/* Panel de registro dentro de la ficha */
+let logDate = isoDate(), logDel = null, logAll = false;
+function renderLog(id){
+  const box = $('#logBox'), e = byId[id]; if(!box || !e) return;
+  const type = logType(e), en = entryFor(id, logDate), rows = en ? en.s : [], last = lastBefore(id, logDate);
+  const rx = prescription(e), top = Number(String(rx.reps).split('–').pop());
+  const lifted = last && type==='weight' ? last.s.filter(s=>s.w>0) : [];
+  const atTop = lifted.length && lifted.every(s=>s.r>=top);
+  const hint = i => { const s = last && (last.s[i] || last.s[last.s.length-1]); return s || {}; };
+  box.innerHTML = `<h4 class="sec">Registrar</h4>
+    <div class="logbox">
+      <div class="logtop">
+        <label class="small muted" for="logDate">Fecha</label>
+        <input type="date" id="logDate" data-logdate value="${logDate}" max="${isoDate()}">
+      </div>
+      ${last?`<p class="small muted" style="margin:8px 0 0"><b>Última vez (${fmtDate(last.d)}):</b> ${esc(sessionText(last))}</p>`:''}
+      ${atTop?`<p class="small" style="margin:6px 0 0">Llegaste al tope de repeticiones: prueba subir un poco el peso.</p>`:''}
+      ${rows.length?`<div class="lsets ${type}">
+        ${type==='time'?`<span></span><span class="lh">Minutos</span><span></span>`:`<span></span><span class="lh">Peso (kg)</span><span></span><span class="lh">Reps</span><span></span>`}
+        ${rows.map((s,i)=>`<span class="ln-n">${i+1}</span>${type==='time'
+          ? `<input type="number" inputmode="decimal" min="0" step="1" id="lm${i}" data-lm="${i}" value="${s.m??''}" placeholder="${hint(i).m??''}" aria-label="Minutos de la serie ${i+1}">`
+          : `<input type="number" inputmode="decimal" min="0" step="0.5" id="lw${i}" data-lw="${i}" value="${s.w??''}" placeholder="${hint(i).w??(e.q==='body weight'?'0':'')}" aria-label="Peso de la serie ${i+1}"><span class="muted">×</span><input type="number" inputmode="numeric" min="0" step="1" id="lr${i}" data-lr="${i}" value="${s.r??''}" placeholder="${hint(i).r??''}" aria-label="Repeticiones de la serie ${i+1}">`}
+          <button class="ib" data-delset="${i}" aria-label="Quitar serie ${i+1}">✕</button>`).join('')}
+      </div>`:''}
+      <button class="btn sm" data-addset style="margin-top:10px">＋ Agregar ${type==='time'?'sesión':'serie'}</button>
+    </div>
+    <div id="logHist"></div>`;
+  renderLogHist(id);
+}
+function renderLogHist(id){
+  const box = $('#logHist'); if(!box) return;
+  const ss = sessions(id), m = metric(id);
+  if(!ss.length){ box.innerHTML = ''; return; }
+  const list = ss.slice().reverse(), shown = logAll ? list : list.slice(0,5);
+  box.innerHTML = `<h4 class="sec">Tu progreso</h4>
+    ${m.pts.length?`<p class="small muted" style="margin:0 0 6px">${esc(m.title)}${m.pts.length<2?'. Registra otra sesión para ver la línea.':''}</p><div class="chart" id="chart"></div>`:''}
+    <div class="lhist">${shown.map(x=>`<div class="lrow">
+      <button class="info" data-editsess="${x.d}"><b>${fmtDate(x.d)}</b><span class="small muted">${esc(sessionText(x))}</span></button>
+      ${logDel===x.d
+        ? `<button class="btn sm pri" data-delsess="yes">Borrar</button><button class="btn sm" data-delsess="no">No</button>`
+        : `<button class="ib" data-delsess="${x.d}" aria-label="Borrar sesión del ${fmtDate(x.d)}">✕</button>`}
+    </div>`).join('')}</div>
+    ${list.length>5?`<button class="btn sm" data-logall style="margin-top:8px">${logAll?'Ver menos':`Ver las ${list.length} sesiones`}</button>`:''}`;
+  if(m.pts.length) lineChart($('#chart'), m);
+}
+function renderProgress(){
+  const w = weekStats();
+  const ids = Object.keys(state.log).filter(id => byId[id] && sessions(id).length)
+    .sort((a,b) => sessions(b).pop().d.localeCompare(sessions(a).pop().d));
+  if(!ids.length) return `<div class="empty">Todavía no hay registros.<br>Abre un ejercicio y anota tu peso y repeticiones en <b>Registrar</b>.</div>`;
+  return `<h2 style="margin-top:12px">Esta semana</h2>
+    <div class="rx"><div><b>${w.days}</b><span>${w.days===1?'Día':'Días'}</span></div><div><b>${w.sets}</b><span>Series</span></div><div><b>${w.kg>=10000?fmtNum(Math.round(w.kg/100)/10)+' t':fmtNum(Math.round(w.kg))}</b><span>${w.kg>=10000?'Total':'Kg total'}</span></div></div>
+    <h2>Por ejercicio</h2>
+    <div class="list">${ids.map(id=>{
+      const e = byId[id], ss = sessions(id), m = metric(id), last = ss[ss.length-1], p = m.pts;
+      const diff = p.length>1 ? p[p.length-1].v - p[0].v : 0;
+      return `<div class="ex" data-loghist="${id}" role="button" tabindex="0">
+        <img class="th sm" data-th="${id}" alt="">
+        <div class="info"><div class="nm">${esc(e.n)}</div>
+          <div class="meta">${fmtDate(last.d)} · ${esc(setText(bestSet(last)))}</div>
+          ${diff?`<div class="meta">${diff>0?'+':''}${fmtNum(diff)} ${m.unit} desde el inicio</div>`:''}</div>
+        ${sparkline(p)}</div>`;
+    }).join('')}</div>`;
+}
+
 /* ---------- Detalle ---------- */
 let openId = null, pickOpen = false;
 function openDetail(id, keep){
   const e = byId[id]; if(!e) return;
-  if(!keep) pickOpen = false;
+  if(!keep){ pickOpen = false; logDate = isoDate(); logDel = null; logAll = false; }
   openId = id;
   const k = KIND[id], rx = prescription(e);
   const t = k ? SPECIAL[k.kind].tips : (TIPS[e.t] || {do:[],avoid:[]});
@@ -618,18 +823,20 @@ function openDetail(id, keep){
     </div>
     ${pickOpen?`<div class="dlg"><div class="muted small" style="margin-bottom:8px">Elige los días (toca de nuevo para quitar):</div>
       <div class="seg">${DAYS.map(d=>`<button class="chip ${inDays.includes(d)?'on':''}" data-addday="${d}">${d}</button>`).join('')}</div></div>`:''}
+    ${logType(e)?'<div id="logBox"></div>':''}
     <h4 class="sec">Cómo hacerlo</h4>
     <ol class="steps">${e.p.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
     <div class="tips"><h4>Consejos</h4><ul>${[...t.do, ...extra].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     ${t.avoid.length?`<div class="tips warn"><h4>Errores comunes</h4><ul>${t.avoid.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
     <p class="muted small" style="margin-top:16px">Si sientes dolor (distinto de la fatiga muscular), detente. Consulta a un profesional si tienes lesiones. Animación © Gym visual.</p>`;
   if($('#sheet').hidden){ $('#sheet').hidden = false; $('#sheetBox').scrollTop = 0; document.body.style.overflow = 'hidden'; }
+  renderLog(id);
   const img = new Image(); img.className = 'gif'; img.alt = 'Animación de ' + e.n; img.crossOrigin = 'anonymous';
   img.onload = () => { const box = $('#anim'); if(box && openId === id) box.replaceChildren(img); };
   img.onerror = () => { const m = $('#animMsg'); if(m && openId === id) m.textContent = 'No se pudo cargar la animación. Revisa tu conexión y vuelve a abrir el ejercicio.'; };
   img.src = gifUrl(e);
 }
-function closeDetail(){ $('#sheet').hidden = true; document.body.style.overflow = ''; openId = null; render(); }
+function closeDetail(){ if(openId) pruneLog(openId); $('#sheet').hidden = true; document.body.style.overflow = ''; openId = null; render(); }
 
 /* ---------- Eventos ---------- */
 const PRESETS = {
@@ -638,7 +845,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -673,6 +880,30 @@ document.addEventListener('click', ev=>{
   if('goal' in d){ state.profile.goal = d.goal; save(); render(); return; }
   if('level' in d){ state.profile.level = d.level; save(); render(); return; }
   if('eq' in d){ const p = state.profile; p.equip = p.equip.includes(d.eq) ? p.equip.filter(x=>x!==d.eq) : [...p.equip, d.eq]; save(); render(); return; }
+  if('sub' in d){ view.sub = d.sub; render(); return; }
+  if('log' in d){
+    openDetail(d.log);
+    if(!entryFor(d.log, logDate)){ addSet(d.log, true); renderLog(d.log); }
+    $('#logBox').scrollIntoView({block:'start'});
+    return;
+  }
+  if('loghist' in d){ openDetail(d.loghist); const h = $('#logHist'); if(h) h.scrollIntoView({block:'start'}); return; }
+  if('addset' in d){
+    addSet(openId); renderLog(openId);
+    const inputs = document.querySelectorAll('.lsets input'); if(inputs.length) inputs[inputs.length - (logType(byId[openId])==='time'?1:2)].focus();
+    return;
+  }
+  if('delset' in d){ const en = entryFor(openId, logDate); if(en){ en.s.splice(+d.delset, 1); save(); renderLog(openId); } return; }
+  if('editsess' in d){ pruneLog(openId); logDate = d.editsess; logDel = null; renderLog(openId); $('#logBox').scrollIntoView({block:'start'}); return; }
+  if('delsess' in d){
+    if(d.delsess==='no') logDel = null;
+    else if(d.delsess==='yes'){
+      state.log[openId] = (state.log[openId]||[]).filter(x=>x.d!==logDel);
+      logDel = null; pruneLog(openId); toast('Sesión borrada'); renderLog(openId); return;
+    } else logDel = d.delsess;
+    renderLogHist(openId); return;
+  }
+  if('logall' in d){ logAll = !logAll; renderLogHist(openId); return; }
   if('media' in d){
     if(d.media==='ask'){ mediaConfirm = true; render(); return; }
     mediaConfirm = false;
@@ -696,11 +927,14 @@ document.addEventListener('click', ev=>{
 });
 document.addEventListener('keydown', ev=>{
   if(ev.key==='Escape' && openId) closeDetail();
-  if((ev.key==='Enter'||ev.key===' ') && ev.target.matches('div[data-open]')){ ev.preventDefault(); openDetail(ev.target.dataset.open); }
+  if((ev.key==='Enter'||ev.key===' ') && ev.target.matches('div[data-open],div[data-loghist]')){ ev.preventDefault(); ev.target.click(); }
 });
 document.addEventListener('change', ev=>{
   const t = ev.target;
   if(t.matches('[data-equip]')){ view.equip = t.value; view.limit = 40; render(); }
+  else if(t.matches('[data-logdate]')){
+    pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
+  }
   else if(t.matches('[data-onlymine]')){ state.profile.onlyMine = t.checked; save(); render(); }
   else if(t.matches('[data-done]')){
     const prefix = todayKey()+'|';
@@ -718,6 +952,12 @@ document.addEventListener('input', ev=>{
   } else if(t.matches('[data-gq]')){
     view = {tab:'explore', zone:null, target:'', equip:'', q:t.value, limit:40}; render();
     const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length);
+  } else if(t.matches('[data-lw],[data-lr],[data-lm]')){
+    const en = entryFor(openId, logDate), s = en && en.s[+(t.dataset.lw ?? t.dataset.lr ?? t.dataset.lm)];
+    if(!s) return;
+    const v = parseFloat(t.value), n = Number.isFinite(v) && v>=0 ? v : null;
+    if('lw' in t.dataset) s.w = n; else if('lr' in t.dataset) s.r = n===null ? null : Math.round(n); else s.m = n;
+    save(); renderLogHist(openId);
   } else if(t.matches('[data-pname]')){
     state.profile.name = t.value; saveLocal(); clearTimeout(nameTimer); nameTimer = setTimeout(save, 600);
   }

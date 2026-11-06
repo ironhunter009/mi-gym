@@ -4,7 +4,8 @@ App web (PWA) para ver ejercicios por zona, con pasos en español, consejos de t
 
 - 1.324 ejercicios de [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) (MIT).
 - Las miniaturas y animaciones se cargan una a una desde ese repositorio (commit fijo) y el service worker las guarda en el dispositivo: cada imagen se descarga una sola vez.
-- Rutina, favoritos y perfil se guardan en el navegador. Para pasarlos a otro dispositivo: Perfil → Copia de seguridad.
+- Registro de peso, repeticiones y minutos por ejercicio, con gráfico de progreso.
+- Rutina, registros, favoritos y perfil se guardan en el navegador. Para pasarlos a otro dispositivo: Perfil → Copia de seguridad.
 - Animaciones © Gym visual — https://gymvisual.com/
 
 ## Archivos
