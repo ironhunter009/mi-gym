@@ -1,9 +1,9 @@
 // Service worker de Mi Gym:
 // - La app (HTML, datos, íconos) se sirve desde caché y se actualiza en segundo plano.
 // - Cada miniatura y animación se descarga una sola vez y queda guardada en el celular.
-const APP = 'migym-app-v1';
+const APP = 'migym-app-v2';
 const MEDIA = 'migym-media-v1';
-const SHELL = ['./', 'index.html', 'data.json', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
+const SHELL = ['./', 'index.html', 'data.json', 'coach.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(APP).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

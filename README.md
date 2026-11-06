@@ -14,6 +14,7 @@ App web (PWA) para ver ejercicios por zona, con pasos en español, consejos de t
 |---|---|
 | `index.html` | La app completa (HTML, CSS y JS) |
 | `data.json` | Los ejercicios: nombre, músculo, equipo y pasos en español |
+| `coach.js` | Revisión de sesiones: patrones de movimiento, qué falta y sugerencias (reglas, sin IA) |
 | `sw.js` | Service worker: caché de la app y de las imágenes, uso sin conexión |
 | `manifest.webmanifest`, `icons/` | Para instalarla en la pantalla de inicio |
 

@@ -152,6 +152,18 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .ph b{font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;line-height:1.1}
 .ph + .ritem{margin-top:8px}
 .btn:disabled{opacity:.45;cursor:default}
+.rev{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.rev h5{font-family:var(--f-display);font-size:16px;font-weight:700;text-transform:uppercase;margin:14px 0 4px}
+.rev .cov{margin:0;padding-left:18px;font-size:14px}
+.rev .cov li{margin:3px 0;overflow-wrap:anywhere}
+.rev .cov b{text-transform:capitalize}
+.rev .wk{list-style:none;margin:0;padding:0;font-size:14px}
+.rev .wk li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}
+.gap{margin-top:8px}
+.gap p{margin:1px 0 2px}
+.srow{display:flex;align-items:center;gap:10px;padding:6px 0;min-width:0}
+.srow .info{flex:1;min-width:0;background:none;border:0;text-align:left;padding:0;display:flex;flex-direction:column}
+.srow .info b{text-transform:capitalize;font-weight:600;font-size:15px;overflow-wrap:anywhere}
 .ritem{flex-wrap:wrap}
 .rlog{flex-basis:100%;display:flex;align-items:center;gap:10px;min-width:0}
 
@@ -218,6 +230,7 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
 </div></nav>
 <div class="toast" id="toast" aria-live="polite"></div>
 
+<script src="coach.js"></script>
 <script>
 (function(){
 let EX = [], byId = {};
@@ -609,10 +622,51 @@ function finishPlan(id){
   state.planLog = state.planLog.slice(-100);
   save();
 }
-let planOpen = null, planEdit = null, planDel = null;
+let planOpen = null, planEdit = null, planDel = null, planReview = null, planWeek = false;
+
+/* Revisión de sesiones (reglas en coach.js) */
+const coachCtx = () => ({byId, level:state.profile.level, isSpecial:id=>!!KIND[id],
+  canDo:e=>!state.profile.equip.length || state.profile.equip.includes(e.q)});
+function suggRow(planId, id, note){
+  const e = byId[id]; if(!e) return '';
+  return `<div class="srow"><img class="th sm" data-th="${id}" data-open="${id}" alt="">
+    <button class="info" data-open="${id}"><b>${esc(e.n)}</b><span class="muted small">${esc(note || tr(EQUIP,e.q))}</span></button>
+    <button class="btn sm" data-pladdex="${esc(planId)}|${id}" aria-label="Agregar ${esc(e.n)}">＋</button></div>`;
+}
+function reviewHTML(p){
+  const r = Coach.review(p, coachCtx());
+  if(r.focus==='libre') return `<div class="rev"><p class="small muted" style="margin:0">Esta sesión es libre, así que no tiene patrones fijos. Para revisarla, elige su tipo en <b>Editar</b>. Para ver qué te falta en general, abre <b>Tu semana</b>, arriba.</p>${orderHTML(p, r)}</div>`;
+  const similar = r.similar.map(s=>`<li><b>${esc(s.a.n)}</b> y <b>${esc(s.b.n)}</b> hacen casi lo mismo (${esc(s.name)}). Puedes dejar uno y usar ese tiempo en algo distinto.</li>`).join('');
+  return `<div class="rev">
+    <p class="small" style="margin:0"><b>${r.done} de ${r.need}</b> patrones clave de ${esc(r.focusName)}${r.done===r.need?': sesión completa.':'.'}</p>
+    ${r.covered.length?`<h5>Ya cubres</h5><ul class="cov">${r.covered.map(c=>`<li><b>${esc(c.slot.name)}:</b> ${esc(c.ex.map(e=>e.n).join(', '))}</li>`).join('')}</ul>`:''}
+    ${r.missing.length?`<h5>Te falta</h5>${r.missing.map(m=>`<div class="gap"><b>${esc(m.slot.name)}</b><p class="small muted">${esc(m.slot.why)}</p>
+      ${m.sugg.length?m.sugg.map(id=>suggRow(p.id,id)).join(''):'<p class="small muted">No hay sugerencias con tu equipamiento. Revísalo en Perfil.</p>'}</div>`).join('')}
+      ${r.missing.some(m=>m.sugg.length)?`<button class="btn sm pri" data-plfill="${esc(p.id)}" style="margin-top:8px">Agregar el primero de cada uno</button>`:''}`:''}
+    ${similar?`<h5>Muy parecidos</h5><ul class="cov">${similar}</ul>`:''}
+    ${orderHTML(p, r)}
+    ${r.total>8?`<h5>Sesión larga</h5><p class="small muted">Tiene ${r.total} ejercicios. Con 5 a 8 suele bastar para entrenar con buena intensidad.</p>`:''}
+    ${r.optional.length?`<h5>Para sumar (opcional)</h5>${r.optional.map(m=>`<div class="gap"><b>${esc(m.slot.name)}</b><p class="small muted">${esc(m.slot.why)}</p>${m.sugg.slice(0,1).map(id=>suggRow(p.id,id)).join('')}</div>`).join('')}`:''}
+  </div>`;
+}
+const orderHTML = (p, r) => r.needsOrder ? `<h5>Orden</h5><p class="small muted">Conviene hacer primero los ejercicios grandes, cuando estás con más energía, y al final los de músculos pequeños.</p><button class="btn sm" data-plsort="${esc(p.id)}">Ordenar la sesión</button>` : '';
+function weekHTML(){
+  if(!state.plans.some(p=>p.ids.length)) return '';
+  const w = Coach.weekly(state.plans, coachCtx()), miss = w.filter(g=>!g.n);
+  return `<div class="day">
+    <button class="ph" data-plweek aria-expanded="${planWeek}">
+      <span class="when">Tu semana</span><b>${w.length-miss.length} de ${w.length} grupos musculares</b>
+      <span class="muted small">${miss.length?`Falta: ${esc(miss.map(g=>g.name).join(', '))}`:'Tus sesiones cubren todo el cuerpo.'}</span>
+    </button>
+    ${planWeek?`<div class="rev"><ul class="wk">${w.map(g=>`<li><span>${g.n?'✓':'✕'} ${esc(g.name)}</span><span class="muted">${g.n?`${g.n} ${g.n===1?'ejercicio':'ejercicios'}`:'Sin ejercicios'}</span></li>`).join('')}</ul>
+      ${miss.some(g=>g.sugg&&g.home)?`<h5>Para completarla</h5>${miss.filter(g=>g.sugg&&g.home).map(g=>suggRow(g.home.id, g.sugg, `${g.name} · va en ${listName(g.home.id)}`)).join('')}`:''}</div>`:''}
+  </div>`;
+}
+
 function renderPlans(){
   const next = nextPlan(), open = planOpen || (next && next.id), today = isoDate();
   return `<p class="sub" style="margin:0 0 12px">Sin días fijos: van en orden y la app te marca cuál sigue.</p>
+    ${weekHTML()}
     ${state.plans.map(p=>{
       const isOpen = p.id===open, isNext = next && p.id===next.id, last = lastDone(p.id), doneToday = last && last.d===today;
       const zs = [...new Set(p.ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
@@ -630,11 +684,15 @@ function renderPlans(){
               ? `<button class="btn sm" data-plundo="${esc(p.id)}">Deshacer terminado</button>`
               : `<button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button>`}
             <button class="btn sm" data-tab="home">＋ Agregar ejercicio</button>
+            <button class="btn sm" data-plreview="${esc(p.id)}" aria-expanded="${planReview===p.id}">Revisar sesión</button>
             <button class="btn sm" data-pledit="${esc(p.id)}">Editar</button>
           </div>
+          ${planReview===p.id?reviewHTML(p):''}
           ${planEdit===p.id?`<div class="dlg">
             <label class="small muted" for="pn-${esc(p.id)}">Nombre</label>
             <input class="search" id="pn-${esc(p.id)}" data-plname="${esc(p.id)}" value="${esc(p.name)}" autocomplete="off" style="margin-top:4px">
+            <label class="small muted" for="pf-${esc(p.id)}" style="display:block;margin-top:10px">Tipo de sesión (para revisarla)</label>
+            <select id="pf-${esc(p.id)}" data-plfocus="${esc(p.id)}" style="margin-top:4px">${Object.entries(Coach.FOCUS).map(([k,f])=>`<option value="${k}" ${Coach.focusOf(p)===k?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
             <label class="tog" style="margin-top:10px"><input type="checkbox" id="po-${esc(p.id)}" data-plopt="${esc(p.id)}" ${p.opt?'checked':''}> Solo a veces (no entra en el orden)</label>
             <div class="row">
               <button class="btn sm" data-plmove="${esc(p.id)}" ${state.plans[0]===p?'disabled':''}>↑ Subir en el orden</button>
@@ -935,7 +993,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -971,7 +1029,21 @@ document.addEventListener('click', ev=>{
   if('level' in d){ state.profile.level = d.level; save(); render(); return; }
   if('eq' in d){ const p = state.profile; p.equip = p.equip.includes(d.eq) ? p.equip.filter(x=>x!==d.eq) : [...p.equip, d.eq]; save(); render(); return; }
   if('sub' in d){ view.sub = d.sub; if(d.sub!=='progreso'){ state.routineMode = d.sub; save(); } render(); return; }
-  if('plopen' in d){ planOpen = d.plopen; planEdit = null; planDel = null; render(); return; }
+  if('plopen' in d){ planOpen = d.plopen; planEdit = null; planDel = null; planReview = null; render(); return; }
+  if('plweek' in d){ planWeek = !planWeek; render(); return; }
+  if('plreview' in d){ planReview = planReview===d.plreview ? null : d.plreview; planEdit = null; render(); return; }
+  if('pladdex' in d){
+    const [pid, id] = d.pladdex.split('|'), p = planById(pid);
+    if(p && !p.ids.includes(id)){ p.ids.push(id); save(); toast('Añadido a '+listName(pid)); }
+    render(); return;
+  }
+  if('plfill' in d){
+    const p = planById(d.plfill), r = Coach.review(p, coachCtx());
+    const add = r.missing.map(m=>m.sugg[0]).filter(Boolean);
+    p.ids.push(...add.filter((id,i)=>add.indexOf(id)===i));
+    save(); toast('Sugerencias agregadas'); render(); return;
+  }
+  if('plsort' in d){ const p = planById(d.plsort); p.ids = Coach.review(p, coachCtx()).order; save(); toast('Sesión ordenada'); render(); return; }
   if('plfinish' in d){
     finishPlan(d.plfinish); planOpen = null; planEdit = null; render();
     const n = nextPlan(); toast(n ? `Listo. Próximo: ${n.name}` : 'Entreno terminado');
@@ -1047,6 +1119,7 @@ document.addEventListener('keydown', ev=>{
 document.addEventListener('change', ev=>{
   const t = ev.target;
   if(t.matches('[data-equip]')){ view.equip = t.value; view.limit = 40; render(); }
+  else if(t.matches('[data-plfocus]')){ const p = planById(t.dataset.plfocus); if(p){ p.focus = t.value; save(); render(); } }
   else if(t.matches('[data-plopt]')){ const p = planById(t.dataset.plopt); if(p){ p.opt = t.checked; save(); render(); } }
   else if(t.matches('[data-logdate]')){
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
