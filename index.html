@@ -146,6 +146,12 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .ib{background:none;border:0;color:var(--muted);font-size:18px;padding:6px}
 .progress{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:8px}
 .progress i{display:block;height:100%;background:var(--accent)}
+.day.nx{border-color:var(--accent)}
+.ph{display:flex;flex-direction:column;gap:1px;width:100%;background:none;border:0;padding:0;text-align:left}
+.ph .when{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.ph b{font-family:var(--f-display);font-size:22px;font-weight:700;text-transform:uppercase;line-height:1.1}
+.ph + .ritem{margin-top:8px}
+.btn:disabled{opacity:.45;cursor:default}
 .ritem{flex-wrap:wrap}
 .rlog{flex-basis:100%;display:flex;align-items:center;gap:10px;min-width:0}
 
@@ -421,7 +427,15 @@ const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Doming
 const KEY = 'migym.v1';
 const fresh = () => ({
   profile:{name:'', goal:'hipertrofia', level:'principiante', equip:[], onlyMine:false},
-  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}, log:{}
+  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}, log:{},
+  /* Rutina por sesiones: van en orden, sin día fijo. opt = "a veces": no entra en el ciclo del próximo entreno */
+  routineMode:'semana', planLog:[],
+  plans:[
+    {id:'p1', name:'Empuje', ids:[]},
+    {id:'p2', name:'Tirón', ids:[]},
+    {id:'p3', name:'Pierna y lo que quedó', ids:[]},
+    {id:'p4', name:'Pendiente', ids:[], opt:true}
+  ]
 });
 function normalize(s){
   const base = fresh();
@@ -431,7 +445,10 @@ function normalize(s){
     favs:Array.isArray(s.favs)?s.favs:[],
     routine:Object.assign(base.routine, s.routine||{}),
     done:(s.done && typeof s.done==='object')?s.done:{},
-    log:(s.log && typeof s.log==='object')?s.log:{}
+    log:(s.log && typeof s.log==='object')?s.log:{},
+    routineMode:s.routineMode==='sesiones'?'sesiones':'semana',
+    planLog:Array.isArray(s.planLog)?s.planLog:[],
+    plans:Array.isArray(s.plans)?s.plans:base.plans
   };
 }
 let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY))); }catch(_){ return fresh(); } })();
@@ -439,11 +456,12 @@ let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY)));
 /* Se guarda en este dispositivo; para pasarlo a otro, Perfil > Copia de seguridad */
 function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(_){} }
 const save = saveLocal;
-const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log}))));
+const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log, routineMode:state.routineMode, plans:state.plans, planLog:state.planLog}))));
 function restoreCode(code){
   const s = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   if(!s || !s.routine) throw new Error('formato');
-  if(!s.log) s.log = state.log; /* los códigos antiguos no traen registros: se conservan los de este dispositivo */
+  /* los códigos antiguos no traen estos datos: se conservan los de este dispositivo */
+  for(const k of ['log','plans','planLog','routineMode']) if(!s[k]) s[k] = state[k];
   state = normalize(s); save();
 }
 
@@ -538,6 +556,14 @@ function renderHome(){
     </div>`;
 }
 function todayHTML(){
+  if(state.routineMode==='sesiones'){
+    const p = nextPlan();
+    if(!p || !p.ids.length) return '';
+    const done = p.ids.filter(id=>state.done[todayKey()+'|'+p.id+'|'+id]).length;
+    return `<h2>Próximo entreno · ${esc(planLabel(p))}</h2><div class="day"><div class="dh"><h4>${esc(p.name)}</h4><span class="muted small">${done} de ${p.ids.length} hechos</span></div>
+      <div class="progress"><i style="width:${Math.round(done/p.ids.length*100)}%"></i></div>${p.ids.map(id=>routineItem(p.id,id)).join('')}
+      <div class="row"><button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button></div></div>`;
+  }
   const d = todayName(), ids = state.routine[d] || [];
   if(!ids.length) return '';
   const done = ids.filter(id=>state.done[todayKey()+'|'+d+'|'+id]).length;
@@ -551,7 +577,7 @@ function renderExplore(){
 }
 function routineItem(d, id){
   const e = byId[id]; if(!e) return '';
-  const rx = prescription(e), key = todayKey()+'|'+d+'|'+id, done = !!state.done[key], isToday = d===todayName();
+  const rx = prescription(e), key = todayKey()+'|'+d+'|'+id, done = !!state.done[key], isToday = !!planById(d) || d===todayName();
   return `<div class="ritem ${done&&isToday?'done':''}">
     ${isToday?`<input type="checkbox" data-done="${esc(key)}" ${done?'checked':''} aria-label="Marcar como hecho">`:''}
     <img class="th sm" data-th="${e.i}" alt="" data-open="${e.i}">
@@ -565,14 +591,76 @@ function logLine(id){
   const last = ss[ss.length-1];
   return last.d===isoDate() ? `Hoy: ${last.s.length} ${last.s.length===1?'serie':'series'}` : `Última vez: ${setText(bestSet(last))}`;
 }
+/* ---------- Rutina por sesiones ---------- */
+const planById = id => state.plans.find(p=>p.id===id);
+const planLabel = p => `Día ${state.plans.indexOf(p)+1}`;
+const lastDone = id => [...state.planLog].reverse().find(x=>x.id===id);
+const listOf = key => (planById(key) || {ids:state.routine[key]}).ids;
+const listName = key => { const p = planById(key); return p ? `${planLabel(p)} · ${p.name}` : key; };
+function nextPlan(){
+  const main = state.plans.filter(p=>!p.opt);
+  if(!main.length) return state.plans[0] || null;
+  const last = [...state.planLog].reverse().find(x=>main.some(p=>p.id===x.id));
+  return last ? main[(main.findIndex(p=>p.id===last.id)+1) % main.length] : main[0];
+}
+function finishPlan(id){
+  const d = isoDate();
+  if(!state.planLog.some(x=>x.id===id && x.d===d)) state.planLog.push({id, d});
+  state.planLog = state.planLog.slice(-100);
+  save();
+}
+let planOpen = null, planEdit = null, planDel = null;
+function renderPlans(){
+  const next = nextPlan(), open = planOpen || (next && next.id), today = isoDate();
+  return `<p class="sub" style="margin:0 0 12px">Sin días fijos: van en orden y la app te marca cuál sigue.</p>
+    ${state.plans.map(p=>{
+      const isOpen = p.id===open, isNext = next && p.id===next.id, last = lastDone(p.id), doneToday = last && last.d===today;
+      const zs = [...new Set(p.ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
+      const info = [`${p.ids.length} ${p.ids.length===1?'ejercicio':'ejercicios'}`, last?`última vez ${fmtDate(last.d)}`:''].filter(Boolean).join(' · ');
+      return `<div class="day ${isNext?'nx':''}">
+        <button class="ph" data-plopen="${esc(p.id)}" aria-expanded="${isOpen}">
+          <span class="when">${esc(planLabel(p))}${p.opt?' · a veces':''}${isNext?' · Te toca':''}${doneToday?' · Hecho hoy':''}</span>
+          <b>${esc(p.name)}</b>
+          <span class="muted small">${esc(info)}${zs&&isOpen?`<br>${esc(zs)}`:''}</span>
+        </button>
+        ${isOpen?`${p.ids.map(id=>routineItem(p.id,id)).join('')}
+          ${p.ids.length?'':`<p class="muted small" style="margin:8px 0 0">Aún no tiene ejercicios. Toca <b>Agregar ejercicio</b>, abre uno y elige esta sesión.</p>`}
+          <div class="row">
+            ${doneToday
+              ? `<button class="btn sm" data-plundo="${esc(p.id)}">Deshacer terminado</button>`
+              : `<button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button>`}
+            <button class="btn sm" data-tab="home">＋ Agregar ejercicio</button>
+            <button class="btn sm" data-pledit="${esc(p.id)}">Editar</button>
+          </div>
+          ${planEdit===p.id?`<div class="dlg">
+            <label class="small muted" for="pn-${esc(p.id)}">Nombre</label>
+            <input class="search" id="pn-${esc(p.id)}" data-plname="${esc(p.id)}" value="${esc(p.name)}" autocomplete="off" style="margin-top:4px">
+            <label class="tog" style="margin-top:10px"><input type="checkbox" id="po-${esc(p.id)}" data-plopt="${esc(p.id)}" ${p.opt?'checked':''}> Solo a veces (no entra en el orden)</label>
+            <div class="row">
+              <button class="btn sm" data-plmove="${esc(p.id)}" ${state.plans[0]===p?'disabled':''}>↑ Subir en el orden</button>
+              ${planDel===p.id
+                ? `<span class="small">¿Borrar esta sesión?</span><button class="btn sm pri" data-pldel="yes">Sí, borrar</button><button class="btn sm" data-pldel="no">No</button>`
+                : `<button class="btn sm" data-pldel="${esc(p.id)}">Borrar sesión</button>`}
+            </div></div>`:''}`:''}
+      </div>`;
+    }).join('')}
+    <button class="btn sm" data-pladd>＋ Agregar sesión</button>`;
+}
+
 let confirmClear = false;
 function renderRoutine(){
   const any = DAYS.some(d=>state.routine[d].length);
+  const sub = view.sub || state.routineMode;
   const tabs = `<div class="chips" style="margin-bottom:10px">
-    <button class="chip ${view.sub!=='progreso'?'on':''}" data-sub="semana">Semana</button>
-    <button class="chip ${view.sub==='progreso'?'on':''}" data-sub="progreso">Progreso</button></div>`;
-  if(view.sub==='progreso'){
+    <button class="chip ${sub==='semana'?'on':''}" data-sub="semana">Por días</button>
+    <button class="chip ${sub==='sesiones'?'on':''}" data-sub="sesiones">Por sesiones</button>
+    <button class="chip ${sub==='progreso'?'on':''}" data-sub="progreso">Progreso</button></div>`;
+  if(sub==='progreso'){
     app.innerHTML = `<div class="top"><h1>Mi rutina</h1></div>${tabs}${renderProgress()}`;
+    return;
+  }
+  if(sub==='sesiones'){
+    app.innerHTML = `<div class="top"><h1>Mi rutina</h1></div>${tabs}${renderPlans()}`;
     return;
   }
   app.innerHTML = `<div class="top"><div><h1>Mi rutina</h1>
@@ -811,18 +899,20 @@ function openDetail(id, keep){
   const k = KIND[id], rx = prescription(e);
   const t = k ? SPECIAL[k.kind].tips : (TIPS[e.t] || {do:[],avoid:[]});
   const extra = k ? [] : [...(EQ_TIPS[e.q] ? [EQ_TIPS[e.q]] : []), ...GENERAL_DO];
-  const inDays = DAYS.filter(d=>state.routine[d].includes(id)), f = isFav(id);
+  const byPlan = state.routineMode==='sesiones';
+  const slots = byPlan ? state.plans.map(p=>({key:p.id, label:`${planLabel(p)} · ${p.name}`, short:planLabel(p)})) : DAYS.map(d=>({key:d, label:d, short:d.slice(0,3)}));
+  const inDays = slots.filter(s=>listOf(s.key).includes(id)), f = isFav(id);
   $('#sheetBox').innerHTML = `
     <div class="hd"><h3>${esc(e.n)}</h3><button class="x" data-close aria-label="Cerrar">✕</button></div>
     <div class="anim" id="anim"><span class="muted small" id="animMsg">Cargando animación…</span></div>
     <div class="tags">${k?`<span class="tag a">${esc(SPECIAL[k.kind].name)} · ${esc(k.group)}</span>`:''}<span class="tag ${k?'':'a'}">${esc(tr(TARGET,e.t))}</span><span class="tag">${esc(tr(EQUIP,e.q))}</span>${e.s.map(m=>`<span class="tag">${esc(tr(MUSCLE,m))}</span>`).join('')}</div>
     <div class="rx"><div><b>${rx.sets}</b><span>Series</span></div><div><b>${rx.reps}</b><span>${rx.unit}</span></div><div><b>${rx.rest}</b><span>${rx.restLabel||'Descanso'}</span></div></div>
     <div class="actions">
-      <button class="btn pri" data-addr>${inDays.length?'En tu rutina: '+inDays.map(d=>d.slice(0,3)).join(', '):'＋ Añadir a rutina'}</button>
+      <button class="btn pri" data-addr>${inDays.length?'En tu rutina: '+inDays.map(s=>s.short).join(', '):'＋ Añadir a rutina'}</button>
       <button class="btn" data-fav="${e.i}">${f?'★ Favorito':'☆ Favorito'}</button>
     </div>
-    ${pickOpen?`<div class="dlg"><div class="muted small" style="margin-bottom:8px">Elige los días (toca de nuevo para quitar):</div>
-      <div class="seg">${DAYS.map(d=>`<button class="chip ${inDays.includes(d)?'on':''}" data-addday="${d}">${d}</button>`).join('')}</div></div>`:''}
+    ${pickOpen?`<div class="dlg"><div class="muted small" style="margin-bottom:8px">Elige ${byPlan?'las sesiones':'los días'} (toca de nuevo para quitar):</div>
+      <div class="seg">${slots.map(s=>`<button class="chip ${inDays.includes(s)?'on':''}" data-addday="${esc(s.key)}">${esc(s.label)}</button>`).join('')}</div></div>`:''}
     ${logType(e)?'<div id="logBox"></div>':''}
     <h4 class="sec">Cómo hacerlo</h4>
     <ol class="steps">${e.p.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
@@ -845,7 +935,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -865,13 +955,13 @@ document.addEventListener('click', ev=>{
   if('close' in d){ closeDetail(); return; }
   if('addr' in d){ pickOpen = !pickOpen; openDetail(openId, true); return; }
   if('addday' in d){
-    const list = state.routine[d.addday];
-    if(list.includes(openId)){ state.routine[d.addday] = list.filter(x=>x!==openId); toast('Quitado del '+d.addday.toLowerCase()); }
-    else { list.push(openId); toast('Añadido al '+d.addday.toLowerCase()); }
+    const list = listOf(d.addday), i = list.indexOf(openId);
+    if(i>=0){ list.splice(i,1); toast('Quitado de '+listName(d.addday)); }
+    else { list.push(openId); toast('Añadido a '+listName(d.addday)); }
     save(); openDetail(openId, true); return;
   }
-  if('rm' in d){ const [day,id] = d.rm.split('|'); state.routine[day] = state.routine[day].filter(x=>x!==id); save(); render(); return; }
-  if('up' in d){ const [day,id] = d.up.split('|'); const l = state.routine[day], i = l.indexOf(id); if(i>0){ [l[i-1],l[i]] = [l[i],l[i-1]]; save(); render(); } return; }
+  if('rm' in d){ const [day,id] = d.rm.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>=0) l.splice(i,1); save(); render(); return; }
+  if('up' in d){ const [day,id] = d.up.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>0){ [l[i-1],l[i]] = [l[i],l[i-1]]; save(); render(); } return; }
   if('clear' in d){
     if(d.clear==='ask') confirmClear = true;
     else { if(d.clear==='yes'){ state.routine = fresh().routine; save(); toast('Rutina vaciada'); } confirmClear = false; }
@@ -880,7 +970,32 @@ document.addEventListener('click', ev=>{
   if('goal' in d){ state.profile.goal = d.goal; save(); render(); return; }
   if('level' in d){ state.profile.level = d.level; save(); render(); return; }
   if('eq' in d){ const p = state.profile; p.equip = p.equip.includes(d.eq) ? p.equip.filter(x=>x!==d.eq) : [...p.equip, d.eq]; save(); render(); return; }
-  if('sub' in d){ view.sub = d.sub; render(); return; }
+  if('sub' in d){ view.sub = d.sub; if(d.sub!=='progreso'){ state.routineMode = d.sub; save(); } render(); return; }
+  if('plopen' in d){ planOpen = d.plopen; planEdit = null; planDel = null; render(); return; }
+  if('plfinish' in d){
+    finishPlan(d.plfinish); planOpen = null; planEdit = null; render();
+    const n = nextPlan(); toast(n ? `Listo. Próximo: ${n.name}` : 'Entreno terminado');
+    return;
+  }
+  if('plundo' in d){
+    const day = isoDate(); state.planLog = state.planLog.filter(x=>!(x.id===d.plundo && x.d===day)); save(); planOpen = d.plundo; render(); return;
+  }
+  if('pledit' in d){ planEdit = planEdit===d.pledit ? null : d.pledit; planDel = null; render(); return; }
+  if('plmove' in d){ const i = state.plans.findIndex(p=>p.id===d.plmove); if(i>0){ [state.plans[i-1],state.plans[i]] = [state.plans[i],state.plans[i-1]]; save(); render(); } return; }
+  if('pldel' in d){
+    if(d.pldel==='no') planDel = null;
+    else if(d.pldel==='yes'){
+      state.plans = state.plans.filter(p=>p.id!==planDel); state.planLog = state.planLog.filter(x=>x.id!==planDel);
+      planDel = null; planEdit = null; planOpen = null; save(); toast('Sesión borrada');
+    } else planDel = d.pldel;
+    render(); return;
+  }
+  if('pladd' in d){
+    const p = {id:'p'+Date.now(), name:'Nueva sesión', ids:[]};
+    state.plans.push(p); planOpen = p.id; planEdit = p.id; planDel = null; save(); render();
+    const n = document.getElementById('pn-'+p.id); if(n){ n.focus(); n.select(); }
+    return;
+  }
   if('log' in d){
     openDetail(d.log);
     if(!entryFor(d.log, logDate)){ addSet(d.log, true); renderLog(d.log); }
@@ -932,6 +1047,7 @@ document.addEventListener('keydown', ev=>{
 document.addEventListener('change', ev=>{
   const t = ev.target;
   if(t.matches('[data-equip]')){ view.equip = t.value; view.limit = 40; render(); }
+  else if(t.matches('[data-plopt]')){ const p = planById(t.dataset.plopt); if(p){ p.opt = t.checked; save(); render(); } }
   else if(t.matches('[data-logdate]')){
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
   }
@@ -952,6 +1068,8 @@ document.addEventListener('input', ev=>{
   } else if(t.matches('[data-gq]')){
     view = {tab:'explore', zone:null, target:'', equip:'', q:t.value, limit:40}; render();
     const n = $('#q'); n.focus(); n.setSelectionRange(n.value.length, n.value.length);
+  } else if(t.matches('[data-plname]')){
+    const p = planById(t.dataset.plname); if(p){ p.name = t.value; save(); }
   } else if(t.matches('[data-lw],[data-lr],[data-lm]')){
     const en = entryFor(openId, logDate), s = en && en.s[+(t.dataset.lw ?? t.dataset.lr ?? t.dataset.lm)];
     if(!s) return;
