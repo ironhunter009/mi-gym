@@ -193,8 +193,20 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .wd.today{box-shadow:0 0 0 2px var(--ink)}
 .wklist{list-style:none;margin:0 0 10px;padding:0;font-size:14px}
 .wklist li{padding:3px 0;overflow-wrap:anywhere}
-.rx.stats{grid-template-columns:repeat(4,minmax(0,1fr))}
-.rx.stats span{letter-spacing:.02em}
+.rx.stats3{margin-top:6px}
+.rx.stats3 span{letter-spacing:.02em;line-height:1.2;display:block}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-width:360px}
+.cal .ch{text-align:center;font-size:12px;color:var(--muted)}
+.cd{aspect-ratio:1;border:0;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding:0}
+.cd.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.cd.today{box-shadow:0 0 0 2px var(--ink)}
+.cd:disabled{cursor:default}
+.feed{display:flex;flex-direction:column;gap:8px}
+.fday{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;scroll-margin-top:12px}
+.fh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.fh b{font-family:var(--f-display);font-size:18px;text-transform:uppercase}
+.fl{display:flex;flex-direction:column;width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;padding:7px 0;margin-top:6px;min-width:0}
+.fl .fn{font-weight:600;text-transform:capitalize;overflow-wrap:anywhere}
 .note{display:block;font-style:italic;color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
 .logbox textarea{width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;resize:vertical;margin-top:4px}
 .actform{margin:4px 0 10px}
@@ -881,17 +893,71 @@ function addSet(id, blank){
   en.s.push(logType(byId[id])==='time' ? {m:prev?prev.m:null} : {w:prev?prev.w:null, r:prev?prev.r:null});
   save();
 }
-function weekStats(){
-  const now = new Date(), mon = new Date(now);
-  mon.setDate(now.getDate() - (now.getDay()+6)%7);
-  const from = isoDate(mon), days = new Set();
-  let sets = 0, kg = 0, min = 0;
-  for(const id of Object.keys(state.log)) for(const x of sessions(id)) if(x.d>=from){
-    days.add(x.d); sets += x.s.length;
-    for(const s of x.s) kg += (s.w||0)*(s.r||0);
+/* ---------- Historial: todo lo hecho en un período ---------- */
+const WEEKDAY = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const addDays = (d, n) => { const t = new Date(d+'T12:00'); t.setDate(t.getDate()+n); return isoDate(t); };
+function dayLog(d){
+  const ex = Object.keys(state.log).map(id=>({id, x:sessions(id).find(x=>x.d===d)})).filter(o=>o.x && byId[o.id]);
+  const plans = state.planLog.filter(x=>x.d===d).map(x=>planById(x.id)).filter(p=>p && p.kind!=='act');
+  const acts = state.acts.filter(a=>a.d===d);
+  return {ex, plans, acts, gym:ex.length>0 || plans.length>0, any:ex.length>0 || plans.length>0 || acts.length>0};
+}
+function periodStats(from, to){
+  const days = new Set(), gymDays = new Set();
+  let sets = 0, kg = 0, min = 0, km = 0;
+  for(const id of Object.keys(state.log)) for(const x of sessions(id)) if(x.d>=from && x.d<=to){
+    days.add(x.d); gymDays.add(x.d); sets += x.s.length;
+    for(const s of x.s){ kg += (s.w||0)*(s.r||0); min += s.m||0; }
   }
-  for(const a of state.acts) if(a.d>=from){ days.add(a.d); min += a.min||0; }
-  return {days:days.size, sets, kg, min};
+  for(const x of state.planLog) if(x.d>=from && x.d<=to){ const p = planById(x.id); if(p && p.kind!=='act'){ days.add(x.d); gymDays.add(x.d); } }
+  for(const a of state.acts) if(a.d>=from && a.d<=to){ days.add(a.d); min += a.min||0; km += a.km||0; }
+  return {days:days.size, gym:gymDays.size, sets, kg, min, km};
+}
+let histRange = 30, histMore = false;
+function historyHTML(){
+  const today = isoDate(), from = addDays(today, -(histRange-1));
+  const st = periodStats(from, today), prev = periodStats(addDays(from, -histRange), addDays(from, -1));
+  const diff = st.days - prev.days;
+  const kg = st.kg>=10000 ? fmtNum(Math.round(st.kg/100)/10)+' t' : fmtNum(Math.round(st.kg));
+  /* calendario: semanas de lunes a domingo que cubren el período */
+  const start = addDays(from, -((new Date(from+'T12:00').getDay()+6)%7));
+  const cells = [];
+  for(let d = start; d <= today; d = addDays(d, 1)) cells.push(d);
+  const logs = Object.fromEntries(cells.map(d=>[d, dayLog(d)]));
+  const daysWith = cells.filter(d=>d>=from && logs[d].any).reverse();
+  const shown = histMore ? daysWith : daysWith.slice(0, 7);
+  return `<h2 style="margin-top:12px">Resumen</h2>
+    <div class="chips" style="margin-bottom:6px">${[7,30,90].map(n=>`<button class="chip ${histRange===n?'on':''}" data-hist="${n}">Últimos ${n} días</button>`).join('')}</div>
+    <div class="rx stats3">
+      <div><b>${st.days}</b><span>${st.days===1?'Día de deporte':'Días de deporte'}</span></div>
+      <div><b>${st.gym}</b><span>${st.gym===1?'Día de gimnasio':'Días de gimnasio'}</span></div>
+      <div><b>${st.sets}</b><span>Series</span></div>
+      <div><b>${kg}</b><span>${st.kg>=10000?'Levantado':'Kg levantados'}</span></div>
+      <div><b>${fmtNum(Math.round(st.min))}</b><span>Min. de actividad</span></div>
+      <div><b>${fmtNum(Math.round(st.km*10)/10)}</b><span>Km recorridos</span></div>
+    </div>
+    <p class="small muted" style="margin:0 0 10px">${prev.days||st.days ? (diff>0 ? `${diff} ${diff===1?'día':'días'} más que los ${histRange} días anteriores.` : diff<0 ? `${-diff} ${diff===-1?'día':'días'} menos que los ${histRange} días anteriores.` : `Igual que los ${histRange} días anteriores.`) : ''}</p>
+    <div class="cal" role="img" aria-label="Días con deporte en los últimos ${histRange} días: ${st.days}">
+      ${['L','M','M','J','V','S','D'].map(l=>`<span class="ch">${l}</span>`).join('')}
+      ${cells.map(d=>{
+        const out = d<from, l = logs[d];
+        return out ? '<span></span>' : `<button class="cd ${l.any?'on':''} ${d===today?'today':''}" ${l.any?`data-histday="${d}"`:'disabled'} aria-label="${WEEKDAY[new Date(d+'T12:00').getDay()]} ${fmtDate(d)}${l.any?': con deporte':''}">${+d.slice(8)}</button>`;
+      }).join('')}
+    </div>
+    <h2>Día a día</h2>
+    ${daysWith.length ? `<div class="feed">${shown.map(d=>dayHTML(d, logs[d])).join('')}</div>
+      ${daysWith.length>7?`<button class="btn sm" data-histmore style="margin-top:8px">${histMore?'Ver menos':`Ver los ${daysWith.length} días`}</button>`:''}`
+      : `<div class="empty">No hay nada registrado en estos ${histRange} días.<br>Anota tus series en <b>Registrar</b> o una salida en <b>Registrar actividad</b>.</div>`}`;
+}
+function dayHTML(d, l){
+  const t = new Date(d+'T12:00');
+  const title = [...l.plans.map(p=>p.name), ...(l.gym && !l.plans.length ? ['Gimnasio'] : [])].join(' + ');
+  return `<div class="fday" id="day-${d}">
+    <div class="fh"><b>${WEEKDAY[t.getDay()]} ${fmtDate(d)}</b><span class="muted small">${esc(title)}</span></div>
+    ${l.ex.map(o=>`<button class="fl" data-loghist="${o.id}"><span class="fn">${esc(byId[o.id].n)}</span><span class="muted small">${o.x.s.length} ${o.x.s.length===1?'serie':'series'} · mejor ${esc(setText(bestSet(o.x)))}</span>${o.x.n?`<span class="small note">${esc(o.x.n)}</span>`:''}</button>`).join('')}
+    ${l.acts.map(a=>`<button class="fl" data-actedit="${esc(a.id)}"><span class="fn">${esc(actName(a))}</span><span class="muted small">${esc(actText(a))}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>`).join('')}
+    ${!l.ex.length && !l.acts.length ? `<p class="small muted" style="margin:4px 0 0">Sesión terminada, sin series anotadas.</p>` : ''}
+  </div>`;
 }
 
 /* ---------- Otras actividades (bici, cerro, caminata…) ---------- */
@@ -1037,13 +1103,10 @@ function renderLogHist(id){
   if(m.pts.length) lineChart($('#chart'), m);
 }
 function renderProgress(){
-  const w = weekStats();
   const ids = Object.keys(state.log).filter(id => byId[id] && sessions(id).length)
     .sort((a,b) => sessions(b).pop().d.localeCompare(sessions(a).pop().d));
-  const week = `<h2 style="margin-top:12px">Esta semana</h2>
-    <div class="rx stats"><div><b>${w.days}</b><span>${w.days===1?'Día':'Días'}</span></div><div><b>${w.sets}</b><span>Series</span></div><div><b>${w.kg>=10000?fmtNum(Math.round(w.kg/100)/10)+' t':fmtNum(Math.round(w.kg))}</b><span>${w.kg>=10000?'Total':'Kg total'}</span></div><div><b>${fmtNum(Math.round(w.min))}</b><span>Min. activ.</span></div></div>`;
-  if(!ids.length) return `${state.acts.length?week:''}${actsHTML()}<h2>Por ejercicio</h2><div class="empty">Todavía no hay registros de ejercicios.<br>Abre un ejercicio y anota tu peso y repeticiones en <b>Registrar</b>.</div>`;
-  return `${week}${actsHTML()}
+  if(!ids.length) return `${historyHTML()}${actsHTML()}<h2>Por ejercicio</h2><div class="empty">Todavía no hay registros de ejercicios.<br>Abre un ejercicio y anota tu peso y repeticiones en <b>Registrar</b>.</div>`;
+  return `${historyHTML()}${actsHTML()}
     <h2>Por ejercicio</h2>
     <div class="list">${ids.map(id=>{
       const e = byId[id], ss = sessions(id), m = metric(id), last = ss[ss.length-1], p = m.pts;
@@ -1102,7 +1165,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -1148,6 +1211,9 @@ document.addEventListener('click', ev=>{
   if('actedit' in d){ const a = state.acts.find(x=>x.id===d.actedit); if(a){ actForm = {...a}; actDel = false; actErr = ''; render(); const f = $('.actform'); if(f) f.scrollIntoView({block:'start'}); } return; }
   if('actcancel' in d){ actForm = null; actErr = ''; render(); return; }
   if('actall' in d){ actAll = !actAll; render(); return; }
+  if('hist' in d){ histRange = +d.hist; histMore = false; render(); return; }
+  if('histmore' in d){ histMore = !histMore; render(); return; }
+  if('histday' in d){ histMore = true; render(); const el = document.getElementById('day-'+d.histday); if(el) el.scrollIntoView({block:'start'}); return; }
   if('actsave' in d){
     const f = actForm;
     if(!(f.min>0) && !(f.km>0)){ actErr = 'Anota al menos los minutos o los kilómetros.'; render(); return; }
