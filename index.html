@@ -22,6 +22,7 @@
   --bg:#eef0ee; --surface:#ffffff; --surface2:#e4e7e4; --line:#d3d7d3;
   --ink:#16191d; --muted:#5d6670; --accent:#c8321e; --accent-ink:#ffffff; --accent-soft:#f6dcd6;
   --ok:#1f7a4d; --warn:#9a5a00;
+  --act:#1f6fb2; --act-ink:#ffffff; --act-soft:#dce9f6;
   --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
   --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --radius:14px;
@@ -29,11 +30,11 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#121417; --surface:#1b1e23; --surface2:#252a30; --line:#30363e;
   --ink:#eef0f2; --muted:#9aa3ad; --accent:#ff6b4f; --accent-ink:#1a0b07; --accent-soft:#3a1f19;
-  --ok:#5fd39a; --warn:#ffb85c; color-scheme:dark}}
+  --ok:#5fd39a; --warn:#ffb85c; --act:#5aaef0; --act-ink:#06121c; --act-soft:#16283a; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#121417; --surface:#1b1e23; --surface2:#252a30; --line:#30363e;
   --ink:#eef0f2; --muted:#9aa3ad; --accent:#ff6b4f; --accent-ink:#1a0b07; --accent-soft:#3a1f19;
-  --ok:#5fd39a; --warn:#ffb85c; color-scheme:dark}
+  --ok:#5fd39a; --warn:#ffb85c; --act:#5aaef0; --act-ink:#06121c; --act-soft:#16283a; color-scheme:dark}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px)}
@@ -189,7 +190,22 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .wkstrip{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px}
 .wkdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:10px 0 8px}
 .wd{display:grid;place-items:center;aspect-ratio:1;max-width:40px;width:100%;margin:0 auto;border-radius:999px;background:var(--surface2);color:var(--muted);font-family:var(--f-display);font-weight:700}
-.wd.on{background:var(--accent);color:var(--accent-ink)}
+.wd.gym,.cd.gym{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.wd.act,.cd.act{background:var(--act);color:var(--act-ink);font-weight:700}
+.wd.both,.cd.both{background:linear-gradient(135deg,var(--accent) 50%,var(--act) 50%);color:#fff;font-weight:700;text-shadow:0 0 2px rgba(0,0,0,.6)}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted);margin:8px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+.sw.gym{background:var(--accent)}
+.sw.act{background:var(--act)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:13px;font-weight:600;line-height:1.5;margin:2px 0}
+.pill.gym{background:var(--accent-soft);color:var(--ink)}
+.pill.act{background:var(--act-soft);color:var(--ink);box-shadow:inset 3px 0 0 var(--act)}
+.didrow{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.day.did{border-color:var(--act)}
+.didit{background:var(--surface);border:1px solid var(--act);border-radius:var(--radius);padding:10px 14px;margin-top:14px}
+.didit .when{display:block;font-size:12px;font-weight:600;color:var(--act);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.fl.act{border-top-color:var(--line);box-shadow:inset 3px 0 0 var(--act);padding-left:10px}
 .wd.today{box-shadow:0 0 0 2px var(--ink)}
 .wklist{list-style:none;margin:0 0 10px;padding:0;font-size:14px}
 .wklist li{padding:3px 0;overflow-wrap:anywhere}
@@ -198,7 +214,6 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;max-width:360px}
 .cal .ch{text-align:center;font-size:12px;color:var(--muted)}
 .cd{aspect-ratio:1;border:0;border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums;padding:0}
-.cd.on{background:var(--accent);color:var(--accent-ink);font-weight:600}
 .cd.today{box-shadow:0 0 0 2px var(--ink)}
 .cd:disabled{cursor:default}
 .feed{display:flex;flex-direction:column;gap:8px}
@@ -584,6 +599,7 @@ function renderHome(){
     <div class="top"><div><h1>Mi <em>Gym</em></h1>
       <div class="sub">${p.name?`Hola, ${esc(p.name)} · `:''}${esc(GOALS[p.goal].name)} · ${esc(LEVELS[p.level])}</div></div></div>
     <input class="search" id="gq" data-gq placeholder="Buscar ejercicio, músculo o equipo…" autocomplete="off">
+    ${todayDoneHTML()}
     ${todayHTML()}
     <div class="row" style="margin-top:14px"><button class="btn sm" data-actnew>＋ Registrar actividad: bici, cerro, caminata…</button></div>
     <h2>Antes y después</h2>
@@ -762,20 +778,31 @@ function weekStrip(){
   mon.setDate(now.getDate() - (now.getDay()+6)%7);
   const days = [...Array(7)].map((_,i)=>{ const t = new Date(mon); t.setDate(mon.getDate()+i); return isoDate(t); });
   const today = isoDate();
-  const items = d => {
-    const out = [], done = state.planLog.filter(x=>x.d===d).map(x=>planById(x.id)).filter(p=>p && p.kind!=='act');
-    out.push(...done.map(p=>p.name));
-    if(!done.length && Object.keys(state.log).some(id=>sessions(id).some(x=>x.d===d))) out.push('Gimnasio');
-    out.push(...state.acts.filter(a=>a.d===d).map(a=>actName(a)+(actText(a)?` ${actText(a)}`:'')));
-    return out;
-  };
-  const info = days.map(d=>({d, it:items(d)})), n = info.filter(x=>x.it.length).length;
+  const info = days.map(d=>({d, l:dayLog(d)})), n = info.filter(x=>x.l.any).length;
   return `<div class="wkstrip">
     <b>Esta semana: ${n} ${n===1?'día':'días'} de deporte</b>
-    <div class="wkdays">${info.map((x,i)=>`<span class="wd ${x.it.length?'on':''} ${x.d===today?'today':''}" aria-label="${DAYS[i]}${x.it.length?': '+esc(x.it.join(', ')):''}">${'LMMJVSD'[i]}</span>`).join('')}</div>
-    ${n?`<ul class="wklist">${info.map((x,i)=>x.it.length?`<li><b>${DAYS[i]}:</b> ${esc(x.it.join(' · '))}</li>`:'').join('')}</ul>`:''}
+    <div class="wkdays">${info.map((x,i)=>`<span class="wd ${kindClass(x.l)} ${x.d===today?'today':''}" aria-label="${DAYS[i]}${x.l.any?': '+esc(dayText(x.l)):''}">${'LMMJVSD'[i]}</span>`).join('')}</div>
+    ${n?`${legendHTML()}<ul class="wklist">${info.map((x,i)=>x.l.any?`<li><b>${DAYS[i]}:</b> ${doneHTML(x.l)}</li>`:'').join('')}</ul>`:''}
     <button class="btn sm" data-actnew>＋ Registrar actividad</button>
   </div>`;
+}
+/* Lo hecho en un día: gimnasio (color de acento) y actividades (color propio) */
+const kindClass = l => l.gym && l.acts.length ? 'both' : l.gym ? 'gym' : l.acts.length ? 'act' : '';
+const gymLabel = l => l.plans.length ? l.plans.map(p=>p.name).join(' + ') : 'Gimnasio';
+const dayText = l => [...(l.gym?[gymLabel(l)]:[]), ...l.acts.map(a=>actName(a)+(actText(a)?` ${actText(a)}`:''))].join(', ');
+const doneHTML = l => [...(l.gym?[`<span class="pill gym">${esc(gymLabel(l))}</span>`]:[]),
+  ...l.acts.map(a=>`<span class="pill act">${esc(actName(a))}${actText(a)?` · ${esc(actText(a))}`:''}</span>`)].join(' ');
+const legendHTML = () => `<div class="legend"><span><i class="sw gym"></i>Gimnasio</span><span><i class="sw act"></i>Actividad</span></div>`;
+function todayDoneHTML(){
+  const l = dayLog(isoDate());
+  if(!l.any) return '';
+  return `<div class="didit"><span class="when">Hoy hiciste</span><div>${doneHTML(l)}</div></div>`;
+}
+/* Fecha de este nombre de día dentro de la semana actual (lunes a domingo) */
+function dateThisWeek(dayName){
+  const now = new Date(), t = new Date(now);
+  t.setDate(now.getDate() - (now.getDay()+6)%7 + DAYS.indexOf(dayName));
+  return isoDate(t);
 }
 
 let confirmClear = false;
@@ -799,9 +826,11 @@ function renderRoutine(){
     ${tabs}${weekStrip()}
     ${!any?`<div class="empty">Tu rutina está vacía.<br>Abre un ejercicio y pulsa <b>Añadir a rutina</b>.</div>`:''}
     ${any?DAYS.map(d=>{ const ids = state.routine[d];
-      if(!ids.length) return `<div class="day"><div class="dh"><h4>${d}</h4><span class="muted small">Descanso</span></div></div>`;
+      const date = dateThisWeek(d), l = date<=isoDate() ? dayLog(date) : {any:false};
+      const did = l.any ? `<div class="didrow"><span class="small muted">Hiciste:</span> ${doneHTML(l)}</div>` : '';
+      if(!ids.length) return `<div class="day ${l.any?'did':''}"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${l.any?'Fuera de la rutina':'Descanso'}</span></div>${did}</div>`;
       const zs = [...new Set(ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
-      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${ids.map(id=>routineItem(d,id)).join('')}</div>`;
+      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${did}${ids.map(id=>routineItem(d,id)).join('')}</div>`;
     }).join(''):''}
     ${any?`<div class="row">${confirmClear
       ? `<span class="small">¿Vaciar toda la rutina?</span><button class="btn sm pri" data-clear="yes">Sí, vaciar</button><button class="btn sm" data-clear="no">Cancelar</button>`
@@ -941,9 +970,10 @@ function historyHTML(){
       ${['L','M','M','J','V','S','D'].map(l=>`<span class="ch">${l}</span>`).join('')}
       ${cells.map(d=>{
         const out = d<from, l = logs[d];
-        return out ? '<span></span>' : `<button class="cd ${l.any?'on':''} ${d===today?'today':''}" ${l.any?`data-histday="${d}"`:'disabled'} aria-label="${WEEKDAY[new Date(d+'T12:00').getDay()]} ${fmtDate(d)}${l.any?': con deporte':''}">${+d.slice(8)}</button>`;
+        return out ? '<span></span>' : `<button class="cd ${kindClass(l)} ${d===today?'today':''}" ${l.any?`data-histday="${d}"`:'disabled'} aria-label="${WEEKDAY[new Date(d+'T12:00').getDay()]} ${fmtDate(d)}${l.any?': con deporte':''}">${+d.slice(8)}</button>`;
       }).join('')}
     </div>
+    ${st.days?legendHTML():''}
     <h2>Día a día</h2>
     ${daysWith.length ? `<div class="feed">${shown.map(d=>dayHTML(d, logs[d])).join('')}</div>
       ${daysWith.length>7?`<button class="btn sm" data-histmore style="margin-top:8px">${histMore?'Ver menos':`Ver los ${daysWith.length} días`}</button>`:''}`
@@ -955,7 +985,7 @@ function dayHTML(d, l){
   return `<div class="fday" id="day-${d}">
     <div class="fh"><b>${WEEKDAY[t.getDay()]} ${fmtDate(d)}</b><span class="muted small">${esc(title)}</span></div>
     ${l.ex.map(o=>`<button class="fl" data-loghist="${o.id}"><span class="fn">${esc(byId[o.id].n)}</span><span class="muted small">${o.x.s.length} ${o.x.s.length===1?'serie':'series'} · mejor ${esc(setText(bestSet(o.x)))}</span>${o.x.n?`<span class="small note">${esc(o.x.n)}</span>`:''}</button>`).join('')}
-    ${l.acts.map(a=>`<button class="fl" data-actedit="${esc(a.id)}"><span class="fn">${esc(actName(a))}</span><span class="muted small">${esc(actText(a))}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>`).join('')}
+    ${l.acts.map(a=>`<button class="fl act" data-actedit="${esc(a.id)}"><span class="fn"><span class="pill act">Actividad</span> ${esc(actName(a))}</span><span class="muted small">${esc(actText(a))}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>`).join('')}
     ${!l.ex.length && !l.acts.length ? `<p class="small muted" style="margin:4px 0 0">Sesión terminada, sin series anotadas.</p>` : ''}
   </div>`;
 }
