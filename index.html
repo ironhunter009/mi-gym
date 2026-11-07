@@ -186,6 +186,13 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
 .xh{stroke:var(--muted);stroke-width:1}
 .tip{position:absolute;top:0;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap;pointer-events:none}
+.wkstrip{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px}
+.wkdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:10px 0 8px}
+.wd{display:grid;place-items:center;aspect-ratio:1;max-width:40px;width:100%;margin:0 auto;border-radius:999px;background:var(--surface2);color:var(--muted);font-family:var(--f-display);font-weight:700}
+.wd.on{background:var(--accent);color:var(--accent-ink)}
+.wd.today{box-shadow:0 0 0 2px var(--ink)}
+.wklist{list-style:none;margin:0 0 10px;padding:0;font-size:14px}
+.wklist li{padding:3px 0;overflow-wrap:anywhere}
 .rx.stats{grid-template-columns:repeat(4,minmax(0,1fr))}
 .rx.stats span{letter-spacing:.02em}
 .note{display:block;font-style:italic;color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
@@ -629,10 +636,9 @@ function nextPlan(){
   const last = [...state.planLog].reverse().find(x=>main.some(p=>p.id===x.id));
   return last ? main[(main.findIndex(p=>p.id===last.id)+1) % main.length] : main[0];
 }
-function finishPlan(id){
-  const d = isoDate();
+function finishPlan(id, d = isoDate()){
   if(!state.planLog.some(x=>x.id===id && x.d===d)) state.planLog.push({id, d});
-  state.planLog = state.planLog.slice(-100);
+  state.planLog = state.planLog.sort((a,b)=>a.d.localeCompare(b.d)).slice(-100);
   save();
 }
 let planOpen = null, planEdit = null, planDel = null, planReview = null, planWeek = false;
@@ -665,7 +671,7 @@ function reviewHTML(p){
 const orderHTML = (p, r) => r.needsOrder ? `<h5>Orden</h5><p class="small muted">Conviene hacer primero los ejercicios grandes, cuando estás con más energía, y al final los de músculos pequeños.</p><button class="btn sm" data-plsort="${esc(p.id)}">Ordenar la sesión</button>` : '';
 function weekHTML(){
   if(!state.plans.some(p=>p.ids.length)) return '';
-  const w = Coach.weekly(state.plans, coachCtx()), miss = w.filter(g=>!g.n);
+  const w = Coach.weekly(state.plans.filter(p=>p.kind!=='act'), coachCtx()), miss = w.filter(g=>!g.n);
   return `<div class="day">
     <button class="ph" data-plweek aria-expanded="${planWeek}">
       <span class="when">Tu semana</span><b>${w.length-miss.length} de ${w.length} grupos musculares</b>
@@ -683,7 +689,19 @@ function renderPlans(){
     ${state.plans.map(p=>{
       const isOpen = p.id===open, isNext = next && p.id===next.id, last = lastDone(p.id), doneToday = last && last.d===today;
       const zs = [...new Set(p.ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
-      const info = [`${p.ids.length} ${p.ids.length===1?'ejercicio':'ejercicios'}`, last?`última vez ${fmtDate(last.d)}`:''].filter(Boolean).join(' · ');
+      const isAct = p.kind==='act';
+      const info = [isAct ? `Actividad: ${ACT_SHORT[p.actType]||'Otra'}` : `${p.ids.length} ${p.ids.length===1?'ejercicio':'ejercicios'}`, last?`última vez ${fmtDate(last.d)}`:''].filter(Boolean).join(' · ');
+      if(isAct) return `<div class="day ${isNext?'nx':''}">
+        <button class="ph" data-plopen="${esc(p.id)}" aria-expanded="${isOpen}">
+          <span class="when">${esc(planLabel(p))}${p.opt?' · a veces':''}${isNext?' · Te toca':''}${doneToday?' · Hecho hoy':''}</span>
+          <b>${esc(p.name)}</b><span class="muted small">${esc(info)}</span>
+        </button>
+        ${isOpen?`${actForm && actForm.plan===p.id ? actFormHTML() : `<div class="row">
+            <button class="btn sm pri" data-actnew="${esc(p.id)}">Registrar ${esc((ACT_SHORT[p.actType]||'actividad').toLowerCase())}</button>
+            <button class="btn sm" data-pledit="${esc(p.id)}">Editar</button></div>
+          <p class="small muted" style="margin:6px 0 0">Al registrarla, este día queda marcado como hecho.</p>`}
+          ${planEdit===p.id?planEditHTML(p):''}`:''}
+      </div>`;
       return `<div class="day ${isNext?'nx':''}">
         <button class="ph" data-plopen="${esc(p.id)}" aria-expanded="${isOpen}">
           <span class="when">${esc(planLabel(p))}${p.opt?' · a veces':''}${isNext?' · Te toca':''}${doneToday?' · Hecho hoy':''}</span>
@@ -701,21 +719,51 @@ function renderPlans(){
             <button class="btn sm" data-pledit="${esc(p.id)}">Editar</button>
           </div>
           ${planReview===p.id?reviewHTML(p):''}
-          ${planEdit===p.id?`<div class="dlg">
-            <label class="small muted" for="pn-${esc(p.id)}">Nombre</label>
-            <input class="search" id="pn-${esc(p.id)}" data-plname="${esc(p.id)}" value="${esc(p.name)}" autocomplete="off" style="margin-top:4px">
-            <label class="small muted" for="pf-${esc(p.id)}" style="display:block;margin-top:10px">Tipo de sesión (para revisarla)</label>
-            <select id="pf-${esc(p.id)}" data-plfocus="${esc(p.id)}" style="margin-top:4px">${Object.entries(Coach.FOCUS).map(([k,f])=>`<option value="${k}" ${Coach.focusOf(p)===k?'selected':''}>${esc(f.name)}</option>`).join('')}</select>
-            <label class="tog" style="margin-top:10px"><input type="checkbox" id="po-${esc(p.id)}" data-plopt="${esc(p.id)}" ${p.opt?'checked':''}> Solo a veces (no entra en el orden)</label>
-            <div class="row">
-              <button class="btn sm" data-plmove="${esc(p.id)}" ${state.plans[0]===p?'disabled':''}>↑ Subir en el orden</button>
-              ${planDel===p.id
-                ? `<span class="small">¿Borrar esta sesión?</span><button class="btn sm pri" data-pldel="yes">Sí, borrar</button><button class="btn sm" data-pldel="no">No</button>`
-                : `<button class="btn sm" data-pldel="${esc(p.id)}">Borrar sesión</button>`}
-            </div></div>`:''}`:''}
+          ${planEdit===p.id?planEditHTML(p):''}`:''}
       </div>`;
     }).join('')}
-    <button class="btn sm" data-pladd>＋ Agregar sesión</button>`;
+    <div class="row"><button class="btn sm" data-pladd>＋ Agregar sesión</button><button class="btn sm" data-pladdact>＋ Agregar día de actividad</button></div>`;
+}
+function planEditHTML(p){
+  const isAct = p.kind==='act';
+  return `<div class="dlg">
+    <label class="small muted" for="pn-${esc(p.id)}">Nombre</label>
+    <input class="search" id="pn-${esc(p.id)}" data-plname="${esc(p.id)}" value="${esc(p.name)}" autocomplete="off" style="margin-top:4px">
+    <label class="small muted" for="pf-${esc(p.id)}" style="display:block;margin-top:10px">Tipo de sesión</label>
+    <select id="pf-${esc(p.id)}" data-plfocus="${esc(p.id)}" style="margin-top:4px">
+      ${Object.entries(Coach.FOCUS).map(([k,f])=>`<option value="${k}" ${!isAct&&Coach.focusOf(p)===k?'selected':''}>${esc(f.name)}</option>`).join('')}
+      <option value="act" ${isAct?'selected':''}>Actividad (bici, trote, cerro…)</option></select>
+    ${isAct?`<label class="small muted" for="pa-${esc(p.id)}" style="display:block;margin-top:10px">Actividad</label>
+      <select id="pa-${esc(p.id)}" data-plact="${esc(p.id)}" style="margin-top:4px">${Object.entries(ACT_TYPES).map(([k,n])=>`<option value="${k}" ${p.actType===k?'selected':''}>${esc(n)}</option>`).join('')}</select>`:''}
+    <label class="tog" style="margin-top:10px"><input type="checkbox" id="po-${esc(p.id)}" data-plopt="${esc(p.id)}" ${p.opt?'checked':''}> Solo a veces (no entra en el orden)</label>
+    <div class="row">
+      <button class="btn sm" data-plmove="${esc(p.id)}" ${state.plans[0]===p?'disabled':''}>↑ Subir en el orden</button>
+      ${planDel===p.id
+        ? `<span class="small">¿Borrar esta sesión?</span><button class="btn sm pri" data-pldel="yes">Sí, borrar</button><button class="btn sm" data-pldel="no">No</button>`
+        : `<button class="btn sm" data-pldel="${esc(p.id)}">Borrar sesión</button>`}
+    </div></div>`;
+}
+
+/* Semana de deporte: gimnasio y actividades, lunes a domingo */
+function weekStrip(){
+  const now = new Date(), mon = new Date(now);
+  mon.setDate(now.getDate() - (now.getDay()+6)%7);
+  const days = [...Array(7)].map((_,i)=>{ const t = new Date(mon); t.setDate(mon.getDate()+i); return isoDate(t); });
+  const today = isoDate();
+  const items = d => {
+    const out = [], done = state.planLog.filter(x=>x.d===d).map(x=>planById(x.id)).filter(p=>p && p.kind!=='act');
+    out.push(...done.map(p=>p.name));
+    if(!done.length && Object.keys(state.log).some(id=>sessions(id).some(x=>x.d===d))) out.push('Gimnasio');
+    out.push(...state.acts.filter(a=>a.d===d).map(a=>actName(a)+(actText(a)?` ${actText(a)}`:'')));
+    return out;
+  };
+  const info = days.map(d=>({d, it:items(d)})), n = info.filter(x=>x.it.length).length;
+  return `<div class="wkstrip">
+    <b>Esta semana: ${n} ${n===1?'día':'días'} de deporte</b>
+    <div class="wkdays">${info.map((x,i)=>`<span class="wd ${x.it.length?'on':''} ${x.d===today?'today':''}" aria-label="${DAYS[i]}${x.it.length?': '+esc(x.it.join(', ')):''}">${'LMMJVSD'[i]}</span>`).join('')}</div>
+    ${n?`<ul class="wklist">${info.map((x,i)=>x.it.length?`<li><b>${DAYS[i]}:</b> ${esc(x.it.join(' · '))}</li>`:'').join('')}</ul>`:''}
+    <button class="btn sm" data-actnew>＋ Registrar actividad</button>
+  </div>`;
 }
 
 let confirmClear = false;
@@ -731,12 +779,12 @@ function renderRoutine(){
     return;
   }
   if(sub==='sesiones'){
-    app.innerHTML = `<div class="top"><h1>Mi rutina</h1></div>${tabs}${renderPlans()}`;
+    app.innerHTML = `<div class="top"><h1>Mi rutina</h1></div>${tabs}${weekStrip()}${renderPlans()}`;
     return;
   }
   app.innerHTML = `<div class="top"><div><h1>Mi rutina</h1>
     <div class="sub">Series y repeticiones para <b>${esc(GOALS[state.profile.goal].name)}</b>, nivel ${esc(LEVELS[state.profile.level].toLowerCase())}. Cámbialo en Perfil.</div></div></div>
-    ${tabs}
+    ${tabs}${weekStrip()}
     ${!any?`<div class="empty">Tu rutina está vacía.<br>Abre un ejercicio y pulsa <b>Añadir a rutina</b>.</div>`:''}
     ${any?DAYS.map(d=>{ const ids = state.routine[d];
       if(!ids.length) return `<div class="day"><div class="dh"><h4>${d}</h4><span class="muted small">Descanso</span></div></div>`;
@@ -847,10 +895,13 @@ function weekStats(){
 }
 
 /* ---------- Otras actividades (bici, cerro, caminata…) ---------- */
-const ACT_TYPES = {bici:'Bicicleta', cerro:'Cerro / trekking', caminata:'Caminata', trote:'Trote', natacion:'Natación', otro:'Otra'};
+const ACT_TYPES = {bici:'Bicicleta (calle o ruta)', trote:'Trote / running', caminata:'Caminata', cerro:'Cerro / trekking', bicifija:'Bici estática', natacion:'Natación', otro:'Otra'};
+const ACT_SHORT = {bici:'Bicicleta', trote:'Trote', caminata:'Caminata', cerro:'Cerro', bicifija:'Bici estática', natacion:'Natación', otro:'Otra'};
 let actForm = null, actDel = false, actAll = false, actErr = '';
 const actText = a => [a.min>0?`${fmtNum(a.min)} min`:'', a.km>0?`${fmtNum(a.km)} km`:''].filter(Boolean).join(' · ');
-const actName = a => a.type==='otro' && a.label ? a.label : ACT_TYPES[a.type] || 'Actividad';
+const actName = a => a.type==='otro' && a.label ? a.label : ACT_SHORT[a.type] || 'Actividad';
+/* Sesión de tipo actividad que corresponde a un registro (la elegida o la primera de ese tipo) */
+const actPlanFor = (type, planId) => (planId && planById(planId)) || state.plans.find(p=>p.kind==='act' && p.actType===type);
 function actFormHTML(){
   const f = actForm;
   return `<div class="logbox actform">
@@ -863,7 +914,7 @@ function actFormHTML(){
       <label class="small muted" for="actKm">Km (opcional)<input type="number" id="actKm" data-actf="km" inputmode="decimal" min="0" step="0.1" value="${f.km??''}" placeholder="—"></label>
     </div>
     <label class="small muted" for="actNote" style="display:block;margin-top:10px">Nota (opcional)</label>
-    <textarea id="actNote" data-actf="note" rows="2" maxlength="300" placeholder="Ej.: subida al San Cristóbal, ritmo suave">${esc(f.note||'')}</textarea>
+    <textarea id="actNote" data-actf="note" rows="2" maxlength="300" placeholder="Ej.: del depa a Costanera Center por la ciclovía">${esc(f.note||'')}</textarea>
     ${actErr?`<p class="small" style="margin:8px 0 0;color:var(--warn)">${esc(actErr)}</p>`:''}
     <div class="row">
       <button class="btn sm pri" data-actsave>Guardar</button>
@@ -878,12 +929,12 @@ function actsHTML(){
   const list = state.acts.slice().sort((a,b)=>b.d.localeCompare(a.d) || b.id.localeCompare(a.id));
   const shown = actAll ? list : list.slice(0,6);
   return `<h2>Actividades</h2>
-    ${actForm ? actFormHTML() : `<button class="btn sm pri" data-actnew>＋ Registrar actividad</button>`}
+    ${actForm && !actForm.plan ? actFormHTML() : `<button class="btn sm pri" data-actnew>＋ Registrar actividad</button>`}
     ${list.length?`<div class="lhist">${shown.map(a=>`<div class="lrow">
       <button class="info" data-actedit="${esc(a.id)}"><b>${esc(actName(a))}</b><span class="small muted">${fmtDate(a.d)}${actText(a)?' · '+esc(actText(a)):''}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>
     </div>`).join('')}</div>
     ${list.length>6?`<button class="btn sm" data-actall style="margin-top:8px">${actAll?'Ver menos':`Ver las ${list.length} actividades`}</button>`:''}`
-    : (actForm?'':`<p class="small muted">Bicicleta, cerro, caminatas… todo lo que hagas fuera de la rutina.</p>`)}`;
+    : (actForm?'':`<p class="small muted">Bici por la calle, trote en el parque, cerro, caminatas… todo lo que hagas fuera del gimnasio.</p>`)}`;
 }
 
 /* Gráfico de línea: una serie, eje de fechas real, toque o cursor para leer cada punto */
@@ -1051,7 +1102,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -1087,8 +1138,10 @@ document.addEventListener('click', ev=>{
   if('level' in d){ state.profile.level = d.level; save(); render(); return; }
   if('eq' in d){ const p = state.profile; p.equip = p.equip.includes(d.eq) ? p.equip.filter(x=>x!==d.eq) : [...p.equip, d.eq]; save(); render(); return; }
   if('actnew' in d){
-    actForm = {type:'bici', d:isoDate(), min:null, km:null, note:''}; actDel = false; actErr = '';
-    if(view.tab!=='routine' || view.sub!=='progreso'){ view = {tab:'routine', sub:'progreso', zone:null, target:'', equip:'', q:'', limit:40}; }
+    const p = d.actnew ? planById(d.actnew) : null;
+    actForm = {type:p ? p.actType||'bici' : 'bici', d:isoDate(), min:null, km:null, note:'', ...(p?{plan:p.id}:{})}; actDel = false; actErr = '';
+    if(p) planOpen = p.id;
+    else if(view.tab!=='routine' || view.sub!=='progreso'){ view = {tab:'routine', sub:'progreso', zone:null, target:'', equip:'', q:'', limit:40}; }
     render(); const f = $('.actform'); if(f) f.scrollIntoView({block:'start'}); return;
   }
   if('acttype' in d){ actForm.type = d.acttype; render(); return; }
@@ -1103,12 +1156,22 @@ document.addEventListener('click', ev=>{
       ...(f.type==='otro'&&f.label&&f.label.trim()?{label:f.label.trim().slice(0,40)}:{})};
     const i = state.acts.findIndex(x=>x.id===rec.id);
     if(i>=0) state.acts[i] = rec; else state.acts.push(rec);
-    actForm = null; actErr = ''; save(); toast('Actividad guardada'); render(); return;
+    /* si hay una sesión de ese tipo de actividad, queda marcada como hecha ese día */
+    const plan = actPlanFor(rec.type, f.plan);
+    if(plan) finishPlan(plan.id, rec.d);
+    actForm = null; actErr = ''; save(); toast(plan ? `Actividad guardada en ${plan.name}` : 'Actividad guardada'); render(); return;
   }
   if('actdel' in d){
     if(d.actdel==='ask') actDel = true;
     else if(d.actdel==='no') actDel = false;
-    else { state.acts = state.acts.filter(x=>x.id!==actForm.id); actForm = null; actDel = false; save(); toast('Actividad borrada'); }
+    else {
+      const old = state.acts.find(x=>x.id===actForm.id);
+      state.acts = state.acts.filter(x=>x.id!==actForm.id);
+      const plan = old && actPlanFor(old.type, actForm.plan);
+      if(plan && !state.acts.some(a=>a.d===old.d && actPlanFor(a.type)===plan))
+        state.planLog = state.planLog.filter(x=>!(x.id===plan.id && x.d===old.d));
+      actForm = null; actDel = false; save(); toast('Actividad borrada');
+    }
     render(); return;
   }
   if('sub' in d){ view.sub = d.sub; if(d.sub!=='progreso'){ state.routineMode = d.sub; save(); } render(); return; }
@@ -1144,6 +1207,11 @@ document.addEventListener('click', ev=>{
       planDel = null; planEdit = null; planOpen = null; save(); toast('Sesión borrada');
     } else planDel = d.pldel;
     render(); return;
+  }
+  if('pladdact' in d){
+    const p = {id:'p'+Date.now(), name:'Bicicleta', kind:'act', actType:'bici', opt:true, ids:[]};
+    state.plans.push(p); planOpen = p.id; planEdit = p.id; planDel = null; save(); render();
+    toast('Día de actividad agregado'); return;
   }
   if('pladd' in d){
     const p = {id:'p'+Date.now(), name:'Nueva sesión', ids:[]};
@@ -1202,7 +1270,15 @@ document.addEventListener('keydown', ev=>{
 document.addEventListener('change', ev=>{
   const t = ev.target;
   if(t.matches('[data-equip]')){ view.equip = t.value; view.limit = 40; render(); }
-  else if(t.matches('[data-plfocus]')){ const p = planById(t.dataset.plfocus); if(p){ p.focus = t.value; save(); render(); } }
+  else if(t.matches('[data-plfocus]')){
+    const p = planById(t.dataset.plfocus);
+    if(p){
+      if(t.value==='act'){ p.kind = 'act'; p.actType = p.actType || 'bici'; delete p.focus; }
+      else { delete p.kind; p.focus = t.value; }
+      save(); render();
+    }
+  }
+  else if(t.matches('[data-plact]')){ const p = planById(t.dataset.plact); if(p){ p.actType = t.value; save(); render(); } }
   else if(t.matches('[data-plopt]')){ const p = planById(t.dataset.plopt); if(p){ p.opt = t.checked; save(); render(); } }
   else if(t.matches('[data-logdate]')){
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
