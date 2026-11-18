@@ -125,7 +125,8 @@ function suggest(pattern, ctx, exclude, n){
 const strength = (ids, ctx) => ids.map(id=>ctx.byId[id]).filter(e=>e && !ctx.isSpecial(e.i) && e.c!=='cardio');
 const rankOf = e => { const p = patternOf(e); return p ? p.rank : 2; };
 function sorted(ids, ctx){
-  const r = id => { const e = ctx.byId[id]; return !e || ctx.isSpecial(id) ? 0 : e.c==='cardio' ? 4 : rankOf(e); };
+  /* calentamiento primero (0), elongación al final (specialRank alto) */
+  const r = id => { const e = ctx.byId[id]; if(!e) return 0; if(ctx.isSpecial(id)) return ctx.specialRank ? ctx.specialRank(id) : 0; return e.c==='cardio' ? 4 : rankOf(e); };
   return ids.map((id,i)=>({id,i})).sort((a,b)=>r(a.id)-r(b.id) || a.i-b.i).map(x=>x.id);
 }
 
