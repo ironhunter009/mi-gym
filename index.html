@@ -145,7 +145,7 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .dh + .ritem{margin-top:8px}
 .ritem input{width:22px;height:22px;flex:none}
 .ritem .info{flex:1;min-width:0;background:none;border:0;text-align:left;padding:0}
-.ritem .info b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ritem .info b{display:block;font-weight:600;overflow-wrap:anywhere;line-height:1.25}
 .ritem.done .info b{text-decoration:line-through;color:var(--muted)}
 .ib{background:none;border:0;color:var(--muted);font-size:18px;padding:6px}
 .progress{height:6px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:8px}
@@ -170,6 +170,12 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .srow .info b{font-weight:600;font-size:15px;overflow-wrap:anywhere}
 .ritem{flex-wrap:wrap}
 .rlog{flex-basis:100%;display:flex;align-items:center;gap:10px;min-width:0}
+.ritem.swapped{box-shadow:inset 3px 0 0 var(--act);padding-left:8px}
+.swapnote{justify-content:space-between;flex-wrap:wrap;color:var(--act)}
+.swapnote b{color:var(--ink)}
+.swapbox{flex-basis:100%;width:100%;min-width:0;background:var(--surface2);border-radius:12px;padding:10px 12px;margin-top:4px}
+.swapbox .tog{align-items:flex-start}
+.swapbox .srow .btn{flex:none}
 
 /* registro y progreso */
 .logbox{background:var(--surface2);border-radius:12px;padding:12px}
@@ -526,6 +532,8 @@ const fresh = () => ({
   favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}, log:{},
   /* Otras actividades: [{id, d:'AAAA-MM-DD', type, min, km, note}] */
   acts:[], units:{},
+  /* cambios de hoy: "fecha|día o sesión|id original" -> id del equivalente */
+  subs:{},
   /* Rutina por sesiones: van en orden, sin día fijo. opt = "a veces": no entra en el ciclo del próximo entreno */
   routineMode:'semana', planLog:[],
   plans:[
@@ -546,6 +554,7 @@ function normalize(s){
     log:(s.log && typeof s.log==='object')?s.log:{},
     acts:Array.isArray(s.acts)?s.acts:[],
     units:(s.units && typeof s.units==='object')?s.units:{},
+    subs:(s.subs && typeof s.subs==='object')?s.subs:{},
     routineMode:s.routineMode==='sesiones'?'sesiones':'semana',
     planLog:Array.isArray(s.planLog)?s.planLog:[],
     plans:Array.isArray(s.plans)?s.plans:base.plans
@@ -707,15 +716,54 @@ function renderExplore(){
     ${filtersHTML(EX)}${listHTML(applyFilters(EX))}`;
 }
 function routineItem(d, id){
-  const e = byId[id]; if(!e) return '';
-  const rx = prescription(e), key = todayKey()+'|'+d+'|'+id, done = !!state.done[key], isToday = !!planById(d) || d===todayName();
-  return `<div class="ritem ${done&&isToday?'done':''}">
+  const orig = byId[id]; if(!orig) return '';
+  const key = todayKey()+'|'+d+'|'+id, done = !!state.done[key], isToday = !!planById(d) || d===todayName();
+  /* cambio de hoy: se muestra el equivalente, pero el ejercicio guardado en la rutina no cambia */
+  const sub = isToday && state.subs[key] && byId[state.subs[key]], e = sub || orig;
+  const rx = prescription(e), slot = `${d}|${id}`;
+  return `<div class="ritem ${done&&isToday?'done':''} ${sub?'swapped':''}">
     ${isToday?`<input type="checkbox" data-done="${esc(key)}" ${done?'checked':''} aria-label="Marcar como hecho">`:''}
     <img class="th sm" data-th="${e.i}" alt="" data-open="${e.i}">
     <button class="info" data-open="${e.i}"><b>${esc(dn(e))}</b><span class="muted small">${rx.sets} × ${rx.reps} · ${rx.rest}</span></button>
-    <button class="ib" data-up="${esc(d)}|${id}" aria-label="Subir">↑</button>
-    <button class="ib" data-rm="${esc(d)}|${id}" aria-label="Quitar">✕</button>
-    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}">Registrar</button><span class="small muted">${esc(logLine(id))}</span></div>`:''}</div>`;
+    <button class="ib" data-swap="${esc(slot)}" aria-label="Cambiar por un ejercicio equivalente" aria-expanded="${swapOpen===slot}">⇄</button>
+    <button class="ib" data-up="${esc(slot)}" aria-label="Subir">↑</button>
+    <button class="ib" data-rm="${esc(slot)}" aria-label="Quitar">✕</button>
+    ${sub?`<div class="rlog swapnote"><span class="small">Hoy en vez de <b>${esc(dn(orig))}</b></span><button class="btn sm" data-unswap="${esc(key)}">Volver al original</button></div>`:''}
+    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}">Registrar</button><span class="small muted">${esc(logLine(e.i))}</span></div>`:''}
+    ${swapOpen===slot ? swapHTML(d, id, isToday) : ''}</div>`;
+}
+
+/* ---------- Ejercicios equivalentes (máquina ocupada, otro equipo) ----------
+   Mismo patrón de movimiento y músculo; primero los más habituales, variando el equipo. */
+let swapOpen = null, swapForever = false, swapPick = null;
+function alternativesFor(e, n = 6){
+  const k = KIND[e.i], p = Coach.patternOf(e), staple = Object.values(Coach.STAPLES).flat();
+  const same = k ? x => KIND[x.i] && KIND[x.i].group===k.group
+    : p ? x => Coach.patternOf(x)?.id===p.id && !KIND[x.i]
+    : x => x.t===e.t && x.c===e.c && !KIND[x.i];
+  const rank = x => {
+    const si = staple.indexOf(x.i);
+    return (si>=0 ? si/1000 : 1) + (x.t===e.t ? 0 : .5) + (x.q===e.q ? .3 : 0)
+      + (/\(female\)|v\. ?\d|pov|one arm|single|alternat|kneeling|bosu|stability|exercise ball/.test(x.n) ? .6 : 0) + x.n.length/1000;
+  };
+  const list = EX.filter(x => x.i!==e.i && same(x) && equipOk(x)).sort((a,b)=>rank(a)-rank(b));
+  /* máximo 2 por tipo de equipo, para que haya opciones distintas */
+  const out = [], perEq = {};
+  for(const x of list){ if(out.length>=n) break; if((perEq[x.q]||0) >= 2) continue; perEq[x.q] = (perEq[x.q]||0)+1; out.push(x); }
+  return out;
+}
+function swapHTML(d, id, isToday){
+  const e = byId[id], alts = alternativesFor(e);
+  return `<div class="swapbox">
+    <p class="small" style="margin:0 0 4px"><b>Cambiar ${esc(dn(e))} por:</b></p>
+    ${isToday ? `<label class="tog"><input type="checkbox" id="swapForever" data-swapforever ${swapForever?'checked':''}> Cambiarlo también en la rutina (no solo hoy)</label>`
+      : `<p class="small muted" style="margin:0">Se reemplaza en la rutina.</p>`}
+    ${alts.length ? alts.map(x=>`<div class="srow"><img class="th sm" data-th="${x.i}" data-open="${x.i}" alt="">
+      <button class="info" data-open="${x.i}"><b>${esc(dn(x))}</b><span class="muted small">${esc(tr(EQUIP,x.q))}${x.t!==e.t?` · ${esc(tr(TARGET,x.t))}`:''}</span></button>
+      <button class="btn sm" data-swapto="${esc(d)}|${id}|${x.i}|${isToday?1:0}">Elegir</button></div>`).join('')
+      : `<p class="small muted">No encontré equivalentes con tu equipamiento. Revísalo en Perfil.</p>`}
+    <div class="row" style="margin-top:4px"><button class="btn sm" data-swapsearch="${esc(d)}|${id}|${isToday?1:0}">Buscar otro</button><button class="btn sm" data-swap="${esc(d)}|${id}">Cerrar</button></div>
+  </div>`;
 }
 function logLine(id){
   const ss = sessions(id); if(!ss.length) return '';
@@ -1254,6 +1302,9 @@ function openDetail(id, keep){
     <div class="anim" id="anim"><span class="muted small" id="animMsg">Cargando animación…</span></div>
     <div class="tags">${k?`<span class="tag a">${esc(SPECIAL[k.kind].name)} · ${esc(k.group)}</span>`:''}<span class="tag ${k?'':'a'}">${esc(tr(TARGET,e.t))}</span><span class="tag">${esc(tr(EQUIP,e.q))}</span>${e.s.map(m=>`<span class="tag">${esc(tr(MUSCLE,m))}</span>`).join('')}</div>
     <div class="rx"><div><b>${rx.sets}</b><span>Series</span></div><div><b>${rx.reps}</b><span>${rx.unit}</span></div><div><b>${rx.rest}</b><span>${rx.restLabel||'Descanso'}</span></div></div>
+    ${swapPick && swapPick.id!==id && byId[swapPick.id] ? `<div class="swapbox" style="margin:0 0 10px">
+      <p class="small" style="margin:0 0 6px">Estás buscando un reemplazo para <b>${esc(dn(byId[swapPick.id]))}</b>.</p>
+      <button class="btn pri" data-swapto="${esc(swapPick.d)}|${swapPick.id}|${id}|${swapPick.today}">⇄ Usar este ${swapPick.today==='1'&&!swapForever?'hoy':'en la rutina'}</button></div>` : ''}
     <div class="actions">
       <button class="btn pri" data-addr>${inDays.length?'En tu rutina: '+inDays.map(s=>s.short).join(', '):'＋ Añadir a rutina'}</button>
       <button class="btn" data-fav="${e.i}">${f?'★ Favorito':'☆ Favorito'}</button>
@@ -1329,7 +1380,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest],[data-swap],[data-swapto],[data-unswap],[data-swapsearch]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -1340,7 +1391,7 @@ document.addEventListener('click', ev=>{
     if(openId) openDetail(openId, true); else render();
     return;
   }
-  if('tab' in d){ view = {tab:d.tab, zone:null, target:'', equip:'', q:'', limit:40}; confirmClear=false; render(); scrollTo(0,0); return; }
+  if('tab' in d){ view = {tab:d.tab, zone:null, target:'', equip:'', q:'', limit:40}; confirmClear=false; swapPick=null; render(); scrollTo(0,0); return; }
   if('zone' in d){ Object.assign(view, {zone:d.zone, target:'', equip:'', q:'', limit:40}); render(); scrollTo(0,0); return; }
   if('back' in d){ view.zone = null; render(); return; }
   if('sfocus' in d){ sFocus = d.sfocus; render(); return; }
@@ -1378,6 +1429,35 @@ document.addEventListener('click', ev=>{
     if(i>=0){ list.splice(i,1); toast('Quitado de '+listName(d.addday)); }
     else { list.push(openId); toast('Añadido a '+listName(d.addday)); }
     save(); openDetail(openId, true); return;
+  }
+  if('swap' in d){ swapOpen = swapOpen===d.swap ? null : d.swap; swapForever = false; render(); return; }
+  if('unswap' in d){ delete state.subs[d.unswap]; save(); toast('Volviste al ejercicio original'); render(); return; }
+  if('swapsearch' in d){
+    const [day, id, today] = d.swapsearch.split('|'), e = byId[id], p = Coach.patternOf(e);
+    swapPick = {d:day, id, today};
+    view = {tab:'explore', zone:null, target:'', equip:'', q:p ? p.name : tr(TARGET,e.t), limit:40};
+    render(); scrollTo(0,0); toast('Elige uno y toca “Usar este”'); return;
+  }
+  if('swapto' in d){
+    const [day, id, alt, today] = d.swapto.split('|');
+    if(today==='1' && !swapForever){
+      /* solo hoy: se guarda el cambio con la fecha; los de días anteriores se borran */
+      const prefix = todayKey()+'|';
+      for(const k of Object.keys(state.subs)) if(!k.startsWith(prefix)) delete state.subs[k];
+      state.subs[`${todayKey()}|${day}|${id}`] = alt;
+      toast(`Hoy: ${dn(byId[alt])}`);
+    } else {
+      const l = listOf(day), i = l.indexOf(id);
+      if(i>=0){ if(l.includes(alt)) l.splice(i,1); else l[i] = alt; }
+      delete state.subs[`${todayKey()}|${day}|${id}`];
+      toast(`Rutina actualizada: ${dn(byId[alt])}`);
+    }
+    save();
+    const fromSearch = !!swapPick;
+    swapOpen = null; swapPick = null; swapForever = false;
+    if(openId){ $('#sheet').hidden = true; document.body.style.overflow = ''; openId = null; }
+    if(fromSearch) view = {tab:'routine', zone:null, target:'', equip:'', q:'', limit:40};
+    render(); return;
   }
   if('rm' in d){ const [day,id] = d.rm.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>=0) l.splice(i,1); save(); render(); return; }
   if('up' in d){ const [day,id] = d.up.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>0){ [l[i-1],l[i]] = [l[i],l[i-1]]; save(); render(); } return; }
@@ -1537,6 +1617,7 @@ document.addEventListener('change', ev=>{
     }
   }
   else if(t.matches('[data-plact]')){ const p = planById(t.dataset.plact); if(p){ p.actType = t.value; save(); render(); } }
+  else if(t.matches('[data-swapforever]')){ swapForever = t.checked; }
   else if(t.matches('[data-plopt]')){ const p = planById(t.dataset.plopt); if(p){ p.opt = t.checked; save(); render(); } }
   else if(t.matches('[data-logdate]')){
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
