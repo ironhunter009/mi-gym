@@ -51,9 +51,11 @@ const STAPLES = {
   hinge:['0085','1459','0032','0300','0489','1009','0549'],
   legcurl:['0586','0599','3193','0496'],
   legext:['0585','1489'],
-  glute:['1409','3561','1408'],
+  glute:['1409','3562','1408','3561'],
   calves:['0605','0417','1373','0594','0738'],
-  abs:['0872','0274','0212','0472','0276','0687']
+  abs:['0872','0274','0212','0472','0276','0687'],
+  hipside:['0597','0598','0168','3006','0710'],
+  front:['0310','0162','0041','0978']
 };
 
 /* Qué debería cubrir cada tipo de sesión. any: patrones que sirven para ese hueco */
@@ -76,7 +78,9 @@ const S = {
   calves:slot('calves','Pantorrillas',['calves'],'No trabajan lo suficiente con sentadillas y prensa.'),
   lunge:slot('lunge','Zancada o unilateral',['lunge'],'Trabaja cada pierna por separado y corrige desequilibrios.'),
   glute:slot('glute','Empuje de cadera',['glute'],'Trabaja el glúteo en su máxima contracción.'),
-  abs:slot('abs','Abdomen',['abs'],'Da estabilidad para todos los ejercicios pesados.')
+  abs:slot('abs','Abdomen',['abs'],'Da estabilidad para todos los ejercicios pesados.'),
+  hipside:slot('hipside','Aductores y abductores',['hipside'],'Trabajan la cadera por los costados: estabilidad y glúteo medio.'),
+  front:slot('front','Elevación frontal',['front'],'Aísla la parte delantera del hombro; opcional si ya haces press.')
 };
 const FOCUS = {
   empuje:{name:'Empuje', need:[S.press,S.ohp,S.lateral,S.triceps], extra:[S.pressInc,S.fly]},
@@ -84,6 +88,12 @@ const FOCUS = {
   pierna:{name:'Pierna', need:[S.squat,S.hinge,S.calves], extra:[S.lunge,S.glute,S.abs]},
   torso:{name:'Torso', need:[S.press,S.row,S.vpull,S.ohp], extra:[S.lateral,S.biceps,S.triceps]},
   completo:{name:'Cuerpo completo', need:[S.squat,S.press,S.row,S.hinge], extra:[S.ohp,S.abs]},
+  /* un músculo por día */
+  pecho:{name:'Pecho', need:[S.press,S.pressInc,S.fly], extra:[S.triceps]},
+  espalda:{name:'Espalda', need:[S.vpull,S.row,S.rear], extra:[S.traps,S.biceps]},
+  hombros:{name:'Hombros', need:[S.ohp,S.lateral,S.rear], extra:[S.front,S.traps]},
+  brazos:{name:'Brazos', need:[S.biceps,S.triceps], extra:[S.forearms]},
+  gluteos:{name:'Glúteos', need:[S.glute,S.hinge,S.lunge], extra:[S.hipside,S.squat]},
   libre:{name:'Libre', need:[], extra:[]}
 };
 function focusOf(plan){
@@ -94,6 +104,11 @@ function focusOf(plan){
   if(/piern|leg/.test(n)) return 'pierna';
   if(/torso|upper/.test(n)) return 'torso';
   if(/complet|full/.test(n)) return 'completo';
+  if(/pecho|chest/.test(n)) return 'pecho';
+  if(/espalda|back/.test(n)) return 'espalda';
+  if(/hombro|shoulder/.test(n)) return 'hombros';
+  if(/brazo|arm|b[ií]ceps|tr[ií]ceps/.test(n)) return 'brazos';
+  if(/gl[uú]te/.test(n)) return 'gluteos';
   return 'libre';
 }
 
@@ -118,7 +133,8 @@ const variant = e => (e.n.match(/hammer|preacher|incline|reverse|concentration|o
 const MACHINE_FIRST = {'leverage machine':0,'sled machine':0,'cable':1,'smith machine':1,'dumbbell':2,'assisted':2,'band':3,'body weight':3,'kettlebell':4,'ez barbell':4,'barbell':5};
 function suggest(pattern, ctx, exclude, n){
   const list = (STAPLES[pattern]||[]).map(id=>ctx.byId[id]).filter(e=>e && !exclude.has(e.i) && ctx.canDo(e));
-  if(ctx.level==='principiante') list.sort((a,b)=>(MACHINE_FIRST[a.q]??3)-(MACHINE_FIRST[b.q]??3));
+  /* principiante: máquinas primero (salvo el puente de glúteo con barra, que es simple de aprender) */
+  if(ctx.level==='principiante' && pattern!=='glute') list.sort((a,b)=>(MACHINE_FIRST[a.q]??3)-(MACHINE_FIRST[b.q]??3));
   return list.slice(0, n).map(e=>e.i);
 }
 
@@ -168,5 +184,26 @@ function weekly(plans, ctx){
   return GROUPS.map(g=>({name:g.name, n:g.any.reduce((a,p)=>a+(count[p]||0),0), sugg:suggest(g.add, ctx, used, 1)[0]||null, home:homeOf(g.add)}));
 }
 
-window.Coach = {PATTERNS, FOCUS, STAPLES, patternOf, focusOf, review, weekly};
+/* Arma una sesión de un tipo con ejercicios conocidos. variant 0, 1, 2… elige otros ejercicios
+   para el mismo hueco (Full body A, B, C no repiten todo). Primero lo clave, después lo opcional,
+   y si faltan, una segunda variante de lo clave (por ejemplo dos de bíceps en un día de brazos). */
+function build(focus, ctx, variant = 0, n = 6){
+  const f = FOCUS[focus]; if(!f || !f.need.length) return [];
+  const out = [], used = new Set(), extra = new Set();
+  const pick = (s, k, isExtra) => {
+    for(const p of s.any){
+      /* sin los de calentamiento (p. ej. puente de glúteo con marcha): aquí van ejercicios de trabajo */
+      const list = suggest(p, ctx, used, 99).filter(id=>!ctx.isSpecial(id));
+      if(list.length){ const id = list[k % list.length]; used.add(id); out.push(id); if(isExtra) extra.add(id); return; }
+    }
+  };
+  for(const s of f.need){ if(out.length>=n) break; pick(s, variant); }
+  for(const s of f.extra){ if(out.length>=n) break; pick(s, variant, true); }
+  for(let r = 1; r<3 && out.length<n; r++) for(const s of f.need){ if(out.length>=n) break; pick(s, variant + r); }
+  /* orden: grandes primero; a igual tamaño, lo clave antes que lo opcional */
+  const rank = id => rankOf(ctx.byId[id]) + (extra.has(id) ? .5 : 0);
+  return out.map((id,i)=>({id,i})).sort((a,b)=>rank(a.id)-rank(b.id) || a.i-b.i).map(x=>x.id);
+}
+
+window.Coach = {PATTERNS, FOCUS, STAPLES, patternOf, focusOf, review, weekly, build};
 })();

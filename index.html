@@ -186,10 +186,40 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .unit{display:flex;gap:4px;margin-left:auto}
 .unit .chip{padding:5px 10px}
 .lsets{display:grid;gap:6px 8px;align-items:center;margin-top:10px}
-.lsets.weight{grid-template-columns:20px minmax(0,1fr) 12px minmax(0,1fr) 32px}
 .lsets.time{grid-template-columns:20px minmax(0,1fr) 32px}
 .lh{font-size:12px;color:var(--muted)}
 .ln-n{font-family:var(--f-display);font-weight:700;text-align:center}
+/* tipos de serie */
+.lsets.weight{grid-template-columns:30px minmax(0,1fr) 12px minmax(0,1fr) 32px}
+.ln-n.st{padding:4px 0;border:1px dashed var(--line);border-radius:8px;background:none;font-size:15px;line-height:1.1;min-height:32px}
+.ln-n.st.t-c{border-style:solid;color:var(--muted)}
+.ln-n.st.t-d,.ln-n.st.t-rp,.ln-n.st.t-f{border-style:solid;border-color:var(--accent);color:var(--accent);font-size:13px}
+.ln-n.drop{color:var(--muted);font-weight:400}
+.rpw{text-align:right;line-height:1.1}
+.stypes{grid-column:1/-1;background:var(--surface2);border-radius:10px;padding:8px}
+.stypes .chips{flex-wrap:wrap;overflow:visible}
+.dropadd{grid-column:2/-1;justify-self:start}
+.nextmode{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.nextmode .chips{margin:0}
+.nextmode .chip{padding:5px 10px}
+/* superseries */
+.ss{border-left:3px solid var(--accent);padding-left:10px;margin:8px 0 2px;border-radius:2px}
+.ssh{display:flex;flex-direction:column;padding:8px 0 2px}
+.ssh b{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
+.link{display:block;width:100%;background:none;border:0;border-top:1px dashed var(--line);color:var(--muted);font-size:12px;padding:6px 0;text-align:center}
+.link.on{border-top-style:solid}
+.ss + .ritem,.link + .ritem{border-top:0}
+.ssbar{background:var(--accent-soft);border-radius:10px;padding:10px;margin-bottom:10px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+/* tipos de rutina */
+.splitbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+.split{margin:0 0 14px;border:1px solid var(--accent);background:var(--surface)}
+.split .ttl{font-family:var(--f-display);font-size:20px;text-transform:uppercase}
+.splits{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.splitopt{text-align:left;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.splitopt b{font-weight:700}
+.splitopt span{font-size:13px;color:var(--muted);line-height:1.3}
+.splitopt.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.undo{background:var(--surface2);border-radius:12px;padding:10px 12px;margin:0 0 12px}
 .chart{position:relative;touch-action:pan-y}
 .chart svg{display:block;max-width:100%}
 .grid{stroke:var(--line);stroke-width:1}
@@ -493,9 +523,11 @@ for(const [kind, s] of Object.entries(SPECIAL)) for(const g of s.groups) for(con
 const WARM_FOR = {'1685':'p','1686':'p','1687':'p','1688':'p','1460':'p','3655':'p','0628':'p','3561':'p','3013':'p','1422':'p',
   '3021':'e','3011':'e','0688':'t','0235':'et','0863':'et','1017':'t',
   '1368':'p','0257':'p','1428':'et','1418':'p','1167':'e','3147':'p','1364':'p'};
-const FOCUS_LETTER = {empuje:'e', tiron:'t', pierna:'p', torso:'et', completo:'etp', libre:'etp'};
+const FOCUS_LETTER = {empuje:'e', tiron:'t', pierna:'p', torso:'et', completo:'etp', libre:'etp',
+  pecho:'e', espalda:'t', hombros:'e', brazos:'et', gluteos:'p'};
 const STRETCH_FOR = {empuje:['Pecho y hombros','Brazos'], tiron:['Espalda','Brazos','Pecho y hombros'], pierna:['Piernas','Glúteos y cadera','Espalda'],
-  torso:['Pecho y hombros','Espalda','Brazos'], completo:['Piernas','Glúteos y cadera','Espalda','Pecho y hombros'], libre:['Piernas','Glúteos y cadera','Espalda','Pecho y hombros']};
+  torso:['Pecho y hombros','Espalda','Brazos'], completo:['Piernas','Glúteos y cadera','Espalda','Pecho y hombros'], libre:['Piernas','Glúteos y cadera','Espalda','Pecho y hombros'],
+  pecho:['Pecho y hombros','Brazos'], espalda:['Espalda','Brazos'], hombros:['Pecho y hombros','Espalda'], brazos:['Brazos','Pecho y hombros'], gluteos:['Glúteos y cadera','Piernas','Espalda']};
 function suggestSpecial(kind, focus){
   const groups = SPECIAL[kind].groups, ok = id => byId[id] && equipOk(byId[id]);
   if(kind==='calentamiento'){
@@ -536,6 +568,10 @@ const fresh = () => ({
   subs:{},
   /* Rutina por sesiones: van en orden, sin día fijo. opt = "a veces": no entra en el ciclo del próximo entreno */
   routineMode:'semana', planLog:[],
+  /* superseries: "día o sesión|id" -> true = ese ejercicio va unido con el siguiente */
+  links:{},
+  /* al cambiar de tipo de rutina: las sesiones anteriores (para recuperarlas) y sus nombres (para el historial) */
+  plansPrev:null, archived:[],
   plans:[
     {id:'p1', name:'Empuje', ids:[]},
     {id:'p2', name:'Tirón', ids:[]},
@@ -557,7 +593,10 @@ function normalize(s){
     subs:(s.subs && typeof s.subs==='object')?s.subs:{},
     routineMode:s.routineMode==='sesiones'?'sesiones':'semana',
     planLog:Array.isArray(s.planLog)?s.planLog:[],
-    plans:Array.isArray(s.plans)?s.plans:base.plans
+    plans:Array.isArray(s.plans)?s.plans:base.plans,
+    links:(s.links && typeof s.links==='object')?s.links:{},
+    plansPrev:s.plansPrev && Array.isArray(s.plansPrev.plans)?s.plansPrev:null,
+    archived:Array.isArray(s.archived)?s.archived:[]
   };
 }
 let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY))); }catch(_){ return fresh(); } })();
@@ -565,12 +604,12 @@ let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY)));
 /* Se guarda en este dispositivo; para pasarlo a otro, Perfil > Copia de seguridad */
 function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(_){} }
 const save = saveLocal;
-const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log, acts:state.acts, units:state.units, routineMode:state.routineMode, plans:state.plans, planLog:state.planLog}))));
+const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log, acts:state.acts, units:state.units, routineMode:state.routineMode, plans:state.plans, planLog:state.planLog, links:state.links, archived:state.archived}))));
 function restoreCode(code){
   const s = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   if(!s || !s.routine) throw new Error('formato');
   /* los códigos antiguos no traen estos datos: se conservan los de este dispositivo */
-  for(const k of ['log','acts','units','plans','planLog','routineMode']) if(!s[k]) s[k] = state[k];
+  for(const k of ['log','acts','units','plans','planLog','routineMode','links','archived']) if(!s[k]) s[k] = state[k];
   state = normalize(s); save();
 }
 
@@ -680,6 +719,9 @@ function renderHome(){
     <input class="search" id="gq" data-gq placeholder="Buscar ejercicio, músculo o equipo…" autocomplete="off">
     ${todayDoneHTML()}
     ${todayHTML()}
+    ${isNewUser() ? `<div class="sugg" style="margin-top:14px"><span class="when">Para empezar</span>
+      <b>Arma tu rutina</b><p class="small muted" style="margin:4px 0 8px">Full body, por músculo, empuje/tirón/pierna… Elige cómo entrenas y la app te propone los ejercicios.</p>
+      <button class="btn sm pri" data-splitopen>Elegir tipo de rutina</button></div>` : ''}
     <div class="row" style="margin-top:14px"><button class="btn sm" data-actnew>＋ Registrar actividad: bici, cerro, caminata…</button></div>
     <h2>Antes y después</h2>
     <div class="zones pair">${Object.entries(SPECIAL).map(([id,s])=>{ const n = s.groups.reduce((a,g)=>a+g.ids.length,0);
@@ -701,14 +743,14 @@ function todayHTML(){
     if(!p || !p.ids.length) return '';
     const done = p.ids.filter(id=>state.done[todayKey()+'|'+p.id+'|'+id]).length;
     return `<h2>Próximo entreno · ${esc(planLabel(p))}</h2><div class="day"><div class="dh"><h4>${esc(p.name)}</h4><span class="muted small">${done} de ${p.ids.length} hechos</span></div>
-      <div class="progress"><i style="width:${Math.round(done/p.ids.length*100)}%"></i></div>${p.ids.map(id=>routineItem(p.id,id)).join('')}
+      <div class="progress"><i style="width:${Math.round(done/p.ids.length*100)}%"></i></div>${itemsHTML(p.id, p.ids, false)}
       <div class="row"><button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button></div></div>`;
   }
   const d = todayName(), ids = state.routine[d] || [];
   if(!ids.length) return '';
   const done = ids.filter(id=>state.done[todayKey()+'|'+d+'|'+id]).length;
   return `<h2>Hoy · ${d}</h2><div class="day"><div class="dh"><span class="muted small">${done} de ${ids.length} hechos</span></div>
-    <div class="progress"><i style="width:${Math.round(done/ids.length*100)}%"></i></div>${ids.map(id=>routineItem(d,id)).join('')}</div>`;
+    <div class="progress"><i style="width:${Math.round(done/ids.length*100)}%"></i></div>${itemsHTML(d, ids, false)}</div>`;
 }
 function renderExplore(){
   app.innerHTML = `<div class="top"><h1>Buscar</h1></div>
@@ -729,8 +771,37 @@ function routineItem(d, id){
     <button class="ib" data-up="${esc(slot)}" aria-label="Subir">↑</button>
     <button class="ib" data-rm="${esc(slot)}" aria-label="Quitar">✕</button>
     ${sub?`<div class="rlog swapnote"><span class="small">Hoy en vez de <b>${esc(dn(orig))}</b></span><button class="btn sm" data-unswap="${esc(key)}">Volver al original</button></div>`:''}
-    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}">Registrar</button><span class="small muted">${esc(logLine(e.i))}</span></div>`:''}
+    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}|${esc(d)}|${id}">Registrar</button><span class="small muted">${esc(logLine(e.i))}</span></div>`:''}
     ${swapOpen===slot ? swapHTML(d, id, isToday) : ''}</div>`;
+}
+
+/* ---------- Superseries ----------
+   Una lista (día o sesión) se divide en bloques: los ejercicios unidos se hacen uno tras otro, sin
+   descanso entre ellos, y se descansa al terminar la vuelta. 2 = superserie, 3 = triserie, 4+ = circuito. */
+const linkKey = (key, id) => `${key}|${id}`;
+function blocks(key, ids){
+  const out = []; let cur = [];
+  ids.forEach((id, i)=>{ cur.push(id); if(!(state.links[linkKey(key,id)] && i<ids.length-1)){ out.push(cur); cur = []; } });
+  return out;
+}
+const groupOf = (key, id) => blocks(key, listOf(key) || []).find(b=>b.includes(id)) || [id];
+const blockName = n => n===2 ? 'Superserie' : n===3 ? 'Triserie' : 'Circuito';
+/* ejercicio que se hace hoy en ese lugar (con el cambio de hoy, si hay) */
+const shownId = (key, id) => { const s = state.subs[`${todayKey()}|${key}|${id}`]; return s && byId[s] && (planById(key) || key===todayName()) ? s : id; };
+function itemsHTML(key, ids, edit = true){
+  const all = blocks(key, ids);
+  return all.map((b, bi)=>{
+    const join = edit && bi<all.length-1 ? `<button class="link" data-link="${esc(key)}|${b[b.length-1]}">＋ Unir en superserie con el siguiente</button>` : '';
+    if(b.length<2) return routineItem(key, b[0]) + join;
+    return `<div class="ss"><div class="ssh"><b>${blockName(b.length)}</b><span class="small muted">Uno tras otro, sin descanso. Descansa al terminar la vuelta.</span></div>
+      ${b.map((id,i)=>routineItem(key,id) + (edit && i<b.length-1 ? `<button class="link on" data-link="${esc(key)}|${id}">Separar</button>` : '')).join('')}</div>${join}`;
+  }).join('');
+}
+/* al quitar o reemplazar un ejercicio, sus uniones se arreglan */
+function unlinkRemoved(key, list, i){
+  const id = list[i], prev = list[i-1];
+  if(prev && state.links[linkKey(key,prev)] && !state.links[linkKey(key,id)]) delete state.links[linkKey(key,prev)];
+  delete state.links[linkKey(key,id)];
 }
 
 /* ---------- Ejercicios equivalentes (máquina ocupada, otro equipo) ----------
@@ -772,6 +843,8 @@ function logLine(id){
 }
 /* ---------- Rutina por sesiones ---------- */
 const planById = id => state.plans.find(p=>p.id===id);
+/* también las sesiones de un tipo de rutina anterior, para que el historial conserve sus nombres */
+const planInfo = id => planById(id) || state.archived.find(a=>a.id===id);
 const planLabel = p => `Día ${state.plans.indexOf(p)+1}`;
 const lastDone = id => [...state.planLog].reverse().find(x=>x.id===id);
 const listOf = key => (planById(key) || {ids:state.routine[key]}).ids;
@@ -828,9 +901,59 @@ function weekHTML(){
   </div>`;
 }
 
+/* ---------- Tipos de rutina ----------
+   Cada tipo crea sus sesiones (nombre y tipo para el revisor) y, si se pide, las llena con ejercicios
+   conocidos según nivel y equipo (Coach.build). Las sesiones anteriores quedan guardadas para recuperarlas. */
+const SPLITS = {
+  ppl:{name:'Empuje / Tirón / Pierna', desc:'3 sesiones: pecho, hombros y tríceps · espalda y bíceps · pierna.', days:[['Empuje','empuje'],['Tirón','tiron'],['Pierna','pierna']]},
+  full:{name:'Full body', desc:'Todo el cuerpo en cada sesión. Ideal para empezar o si vas 2 o 3 días por semana.', days:[['Full body A','completo'],['Full body B','completo'],['Full body C','completo']]},
+  tp:{name:'Torso / Pierna', desc:'4 sesiones: torso y pierna alternados, dos veces cada uno.', days:[['Torso A','torso'],['Pierna A','pierna'],['Torso B','torso'],['Pierna B','pierna']]},
+  musculo:{name:'Por músculo', desc:'Un grupo por día: pecho, espalda, pierna, hombros y brazos.', days:[['Pecho','pecho'],['Espalda','espalda'],['Pierna','pierna'],['Hombros','hombros'],['Brazos','brazos']]},
+  gluteo:{name:'Glúteos y piernas', desc:'3 sesiones con énfasis en glúteos, más una de torso.', days:[['Glúteos','gluteos'],['Torso','torso'],['Pierna','pierna']]},
+  cero:{name:'Desde cero', desc:'Una sesión vacía para armarla a tu manera.', days:[['Sesión 1','libre']]}
+};
+const splitName = () => (SPLITS[state.profile.split] || {name:'Personalizada'}).name;
+const isNewUser = () => !state.profile.split && !state.plans.some(p=>p.ids.length) && !state.planLog.length && !DAYS.some(d=>state.routine[d].length);
+let splitOpen = null;
+function applySplit(key, fill){
+  const sp = SPLITS[key], ctx = coachCtx(), n = {principiante:5, intermedio:6, avanzado:7}[state.profile.level] || 6;
+  const old = state.plans, t = Date.now(), count = {};
+  if(old.some(p=>p.ids.length || state.planLog.some(x=>x.id===p.id))){
+    state.plansPrev = {plans:old, split:state.profile.split || null};
+    for(const p of old) if(!state.archived.some(a=>a.id===p.id)) state.archived.push({id:p.id, name:p.name, ...(p.kind?{kind:p.kind}:{})});
+  }
+  state.plans = sp.days.map(([name, focus], i)=>{
+    const v = count[focus] = (count[focus] ?? -1) + 1;
+    return {id:`p${t}${i}`, name, focus, ids: fill ? Coach.build(focus, ctx, v, n) : []};
+  });
+  /* los días de actividad (bici, trote…) se mantienen */
+  state.plans.push(...old.filter(p=>p.kind==='act'));
+  state.profile.split = key; state.routineMode = 'sesiones';
+  save();
+}
+function splitHTML(){
+  const first = splitOpen.first, pick = splitOpen.pick, sp = SPLITS[pick];
+  const hasOld = state.plans.some(p=>p.kind!=='act' && p.ids.length);
+  return `<div class="dlg split">
+    <b class="ttl">${first?'¿Cómo entrenas?':'Cambiar tipo de rutina'}</b>
+    <p class="small muted" style="margin:4px 0 10px">Elige una forma y la app arma las sesiones con ejercicios para tu nivel y tu equipo. Después puedes cambiar lo que quieras.</p>
+    <div class="splits">${Object.entries(SPLITS).map(([k,s])=>`<button class="splitopt ${pick===k?'on':''}" data-split="${k}" aria-pressed="${pick===k}"><b>${esc(s.name)}</b><span>${esc(s.desc)}</span></button>`).join('')}</div>
+    ${sp ? `<p class="small" style="margin:12px 0 6px"><b>Sesiones:</b> ${sp.days.map(x=>esc(x[0])).join(' · ')}</p>
+      ${pick!=='cero' ? `<label class="tog"><input type="checkbox" id="splitFill" data-splitfill ${splitOpen.fill?'checked':''}> Llenarlas con ejercicios sugeridos</label>` : ''}
+      ${hasOld ? `<p class="small muted" style="margin:8px 0 0">Tus sesiones actuales quedan guardadas y puedes recuperarlas. Tus registros y tu progreso no se tocan.</p>` : ''}` : ''}
+    <div class="row">
+      ${sp ? `<button class="btn sm pri" data-splitmake>Crear rutina</button>` : ''}
+      <button class="btn sm" data-splitcancel>${first?'Ahora no':'Cancelar'}</button>
+    </div></div>`;
+}
+
 function renderPlans(){
   const next = nextPlan(), open = planOpen || (next && next.id), today = isoDate();
+  if(!splitOpen && isNewUser()) splitOpen = {pick:null, fill:true, first:true};
   return `<p class="sub" style="margin:0 0 12px">Sin días fijos: van en orden y la app te marca cuál sigue.</p>
+    ${splitOpen ? splitHTML() : `<div class="splitbar"><span class="small">Tipo de rutina: <b>${esc(splitName())}</b></span><button class="btn sm" data-splitopen>Cambiar</button></div>`}
+    ${state.plansPrev ? `<div class="undo"><span class="small">Cambiaste el tipo de rutina. Tus sesiones anteriores están guardadas.</span>
+      <div class="row" style="margin-top:6px"><button class="btn sm" data-splitundo="back">Recuperar las anteriores</button><button class="btn sm" data-splitundo="drop">Descartarlas</button></div></div>` : ''}
     ${weekHTML()}
     ${state.plans.map(p=>{
       const isOpen = p.id===open, isNext = next && p.id===next.id, last = lastDone(p.id), doneToday = last && last.d===today;
@@ -854,7 +977,7 @@ function renderPlans(){
           <b>${esc(p.name)}</b>
           <span class="muted small">${esc(info)}${zs&&isOpen?`<br>${esc(zs)}`:''}</span>
         </button>
-        ${isOpen?`${p.ids.map(id=>routineItem(p.id,id)).join('')}
+        ${isOpen?`${itemsHTML(p.id, p.ids)}
           ${p.ids.length?'':`<p class="muted small" style="margin:8px 0 0">Aún no tiene ejercicios. Toca <b>Agregar ejercicio</b>, abre uno y elige esta sesión.</p>`}
           <div class="row">
             ${doneToday
@@ -948,7 +1071,7 @@ function renderRoutine(){
       const did = l.any ? `<div class="didrow"><span class="small muted">Hiciste:</span> ${doneHTML(l)}</div>` : '';
       if(!ids.length) return `<div class="day ${l.any?'did':''}"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${l.any?'Fuera de la rutina':'Descanso'}</span></div>${did}</div>`;
       const zs = [...new Set(ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
-      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${did}${ids.map(id=>routineItem(d,id)).join('')}</div>`;
+      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${did}${itemsHTML(d, ids)}</div>`;
     }).join(''):''}
     ${any?`<div class="row">${confirmClear
       ? `<span class="small">¿Vaciar toda la rutina?</span><button class="btn sm pri" data-clear="yes">Sí, vaciar</button><button class="btn sm" data-clear="no">Cancelar</button>`
@@ -968,6 +1091,8 @@ function renderProfile(){
       <input type="text" id="pname" data-pname value="${esc(p.name)}" placeholder="Opcional" autocomplete="off">
       <label class="f">Objetivo</label>
       <div class="seg">${Object.entries(GOALS).map(([k,x])=>`<button class="chip ${p.goal===k?'on':''}" data-goal="${k}">${esc(x.name)}</button>`).join('')}</div>
+      <label class="f">Tipo de rutina</label>
+      <div class="row" style="margin-top:0;align-items:center"><span>${esc(splitName())}</span><button class="btn sm" data-splitopen>Cambiar</button></div>
       <label class="f">Nivel</label>
       <div class="seg">${Object.entries(LEVELS).map(([k,l])=>`<button class="chip ${p.level===k?'on':''}" data-level="${k}">${esc(l)}</button>`).join('')}</div>
       <label class="f">Unidad de peso por defecto</label>
@@ -1027,18 +1152,45 @@ const unitOf = id => (state.units && state.units[id]) || state.profile.unit || '
 const inUnit = (s, unit) => s.w>0 ? ((s.u||'kg')===unit ? s.w : Math.round((unit==='lb' ? toKg(s)/LB : toKg(s))*10)/10) : 0;
 /* números escritos con coma o punto ("42,5") */
 const parseNum = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) && n>=0 ? n : null; };
-const setText = s => s.m>0 ? `${fmtNum(s.m)} min` : s.w>0 ? `${fmtNum(s.w)} ${s.u||'kg'}${s.r>0?` × ${s.r}`:''}` : `${s.r} reps`;
+/* Tipos de serie: s.t = 'c' calentamiento | 'd' drop set | 'f' al fallo | 'rp' rest-pause (sin t = normal).
+   Drop set y rest-pause guardan sus tramos extra en s.dr: [{w, r, u?}] (drop) o [{r}] (rest-pause, mismo peso). */
+const SET_TYPES = {
+  n:{tag:'', name:'Normal', help:''},
+  c:{tag:'C', name:'Calentamiento', help:'Serie liviana antes de las efectivas. No cuenta para tu mejor marca ni para el gráfico.'},
+  d:{tag:'D', name:'Drop set', help:'Al terminar, bajas el peso y sigues sin descanso. Anota cada bajada.'},
+  f:{tag:'F', name:'Al fallo', help:'Hasta que no puedes hacer otra repetición con buena técnica.'},
+  rp:{tag:'RP', name:'Rest-pause', help:'Llegas al fallo, pausas 10–15 s y sacas unas repeticiones más con el mismo peso.'}
+};
+const isWork = s => s.t!=='c';
+const workSets = ss => { const w = ss.filter(isWork); return w.length ? w : ss; };
+const okDrop = x => x.w>0 || x.r>0;
+const dropText = s => !s.dr || !s.dr.some(okDrop) ? ''
+  : s.t==='rp' ? ` + ${s.dr.filter(x=>x.r>0).map(x=>x.r).join(' + ')}`
+  : ` → ${s.dr.filter(okDrop).map(x=>x.w>0 ? `${fmtNum(x.w)}${x.r>0?` × ${x.r}`:''}` : `${x.r} reps`).join(' → ')}`;
+const typeText = s => s.t==='c' ? ' (calent.)' : s.t==='f' ? ' (al fallo)' : s.t==='rp' ? ' (rest-pause)' : s.t==='d' && !(s.dr||[]).some(okDrop) ? ' (drop)' : '';
+const setText = s => (s.m>0 ? `${fmtNum(s.m)} min` : s.w>0 ? `${fmtNum(s.w)} ${s.u||'kg'}${s.r>0?` × ${s.r}`:''}` : `${s.r} reps`) + dropText(s) + typeText(s);
+/* kilos movidos en una serie, con sus tramos */
+const setVolume = s => toKg(s)*(s.r||0) + (s.dr||[]).reduce((a,x)=>a + (s.t==='rp' ? toKg(s) : toKg({w:x.w, u:x.u||s.u}))*(x.r||0), 0);
 const sessionText = x => x.s.map(setText).join(' · ');
-const bestSet = x => x.s.reduce((a,b) => ((b.m||0)+toKg(b)*1000+(b.r||0)/1000 > (a.m||0)+toKg(a)*1000+(a.r||0)/1000 ? b : a));
+const bestSet = x => workSets(x.s).reduce((a,b) => ((b.m||0)+toKg(b)*1000+(b.r||0)/1000 > (a.m||0)+toKg(a)*1000+(a.r||0)/1000 ? b : a));
+/* tramo nuevo: en drop set, ~20 % menos peso (redondeado a 2,5 kg o 5 lb); en rest-pause, solo reps */
+function newDrop(from, t){
+  if(t==='rp') return {r:null};
+  const u = from.u==='lb' ? 'lb' : 'kg', step = u==='lb' ? 5 : 2.5;
+  const w = from.w>0 ? Math.max(step, Math.round(from.w*0.8/step)*step) : null;
+  return {w, r:null, ...(u==='lb'?{u}:{})};
+}
 function metric(id){
   const ss = sessions(id), e = byId[id], u = unitOf(id);
   if(logType(e)==='time') return {title:'Minutos por sesión', unit:'min', pts:ss.map(x=>({d:x.d, v:x.s.reduce((a,s)=>a+(s.m||0),0)}))};
-  if(ss.some(x=>x.s.some(s=>s.w>0))) return {title:'Mejor peso por sesión', unit:u, pts:ss.filter(x=>x.s.some(s=>s.w>0)).map(x=>({d:x.d, v:Math.max(...x.s.map(s=>inUnit(s,u)))}))};
-  return {title:'Mejores repeticiones por sesión', unit:'reps', pts:ss.map(x=>({d:x.d, v:Math.max(...x.s.map(s=>s.r||0))}))};
+  /* las series de calentamiento no cuentan */
+  if(ss.some(x=>x.s.some(s=>s.w>0))) return {title:'Mejor peso por sesión', unit:u, pts:ss.filter(x=>workSets(x.s).some(s=>s.w>0)).map(x=>({d:x.d, v:Math.max(...workSets(x.s).map(s=>inUnit(s,u)))}))};
+  return {title:'Mejores repeticiones por sesión', unit:'reps', pts:ss.map(x=>({d:x.d, v:Math.max(...workSets(x.s).map(s=>s.r||0))}))};
 }
 function pruneLog(id){
   if(!state.log[id]) return;
   state.log[id] = sessions(id);
+  for(const x of state.log[id]) for(const s of x.s) if(s.dr){ s.dr = s.dr.filter(okDrop); if(!s.dr.length) delete s.dr; }
   if(!state.log[id].length) delete state.log[id];
   save();
 }
@@ -1048,7 +1200,15 @@ function addSet(id, blank){
   if(!en){ en = {d:logDate, s:[]}; list.push(en); list.sort((a,b)=>a.d<b.d?-1:1); }
   const prev = blank ? null : en.s[en.s.length-1];
   const u = unitOf(id);
-  en.s.push(logType(byId[id])==='time' ? {m:prev?prev.m:null} : {w:prev&&prev.w ? inUnit(prev,u) : null, r:prev?prev.r:null, ...(u==='lb'?{u}:{})});
+  if(logType(byId[id])==='time'){ en.s.push({m:prev?prev.m:null}); save(); return; }
+  /* la serie nueva copia la anterior; en pirámide sube (o baja) el peso y ajusta las reps */
+  let w = prev&&prev.w ? inUnit(prev,u) : null, r = prev ? prev.r : null;
+  const step = u==='lb' ? 5 : 2.5;
+  if(prev && nextMode!=='igual' && w>0){
+    w = nextMode==='sube' ? w + step : Math.max(0, w - step);
+    if(r>0) r = nextMode==='sube' ? Math.max(1, r - 2) : r + 2;
+  }
+  en.s.push({w, r, ...(prev&&prev.t==='c'?{t:'c'}:{}), ...(u==='lb'?{u}:{})});
   save();
 }
 /* ---------- Historial: todo lo hecho en un período ---------- */
@@ -1056,7 +1216,7 @@ const WEEKDAY = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const addDays = (d, n) => { const t = new Date(d+'T12:00'); t.setDate(t.getDate()+n); return isoDate(t); };
 function dayLog(d){
   const ex = Object.keys(state.log).map(id=>({id, x:sessions(id).find(x=>x.d===d)})).filter(o=>o.x && byId[o.id]);
-  const plans = state.planLog.filter(x=>x.d===d).map(x=>planById(x.id)).filter(p=>p && p.kind!=='act');
+  const plans = state.planLog.filter(x=>x.d===d).map(x=>planInfo(x.id)).filter(p=>p && p.kind!=='act');
   const acts = state.acts.filter(a=>a.d===d);
   return {ex, plans, acts, gym:ex.length>0 || plans.length>0, any:ex.length>0 || plans.length>0 || acts.length>0};
 }
@@ -1065,9 +1225,9 @@ function periodStats(from, to){
   let sets = 0, kg = 0, min = 0, km = 0;
   for(const id of Object.keys(state.log)) for(const x of sessions(id)) if(x.d>=from && x.d<=to){
     days.add(x.d); gymDays.add(x.d); sets += x.s.length;
-    for(const s of x.s){ kg += toKg(s)*(s.r||0); min += s.m||0; }
+    for(const s of x.s){ kg += setVolume(s); min += s.m||0; }
   }
-  for(const x of state.planLog) if(x.d>=from && x.d<=to){ const p = planById(x.id); if(p && p.kind!=='act'){ days.add(x.d); gymDays.add(x.d); } }
+  for(const x of state.planLog) if(x.d>=from && x.d<=to){ const p = planInfo(x.id); if(p && p.kind!=='act'){ days.add(x.d); gymDays.add(x.d); } }
   for(const a of state.acts) if(a.d>=from && a.d<=to){ days.add(a.d); min += a.min||0; km += a.km||0; }
   return {days:days.size, gym:gymDays.size, sets, kg, min, km};
 }
@@ -1215,17 +1375,48 @@ function sparkline(pts){
 
 /* Panel de registro dentro de la ficha */
 let logDate = isoDate(), logDel = null, logAll = false;
+/* logCtx: desde qué lugar de la rutina se abrió (para superseries). stypeOpen: serie con el menú de tipo abierto */
+let logCtx = null, stypeOpen = null, nextMode = 'igual';
 function renderLog(id){
   const box = $('#logBox'), e = byId[id]; if(!box || !e) return;
   const type = logType(e), en = entryFor(id, logDate), rows = en ? en.s : [], last = lastBefore(id, logDate);
   const rx = prescription(e), top = Number(String(rx.reps).split('–').pop());
-  const lifted = last && type==='weight' ? last.s.filter(s=>s.w>0) : [];
+  const lifted = last && type==='weight' ? last.s.filter(s=>s.w>0 && isWork(s)) : [];
   const atTop = lifted.length && lifted.every(s=>s.r>=top);
   const hint = i => { const s = last && (last.s[i] || last.s[last.s.length-1]); return s || {}; };
   const u = unitOf(id), hintW = i => { const s = hint(i); return s.w>0 ? fmtNum(inUnit(s,u)) : (e.q==='body weight'?'0':''); };
   const num = n => n==null ? '' : fmtNum(n);
+  /* superserie: botón para pasar al siguiente ejercicio del bloque, sin descanso (o descansar al cerrar la vuelta) */
+  const g = logCtx && logDate===isoDate() ? groupOf(logCtx.key, logCtx.orig) : [];
+  let ssBar = '';
+  if(g.length>1 && g.includes(logCtx.orig)){
+    const at = g.indexOf(logCtx.orig), nxt = g[(at+1)%g.length], round = at===g.length-1, nid = shownId(logCtx.key, nxt);
+    ssBar = `<div class="ssbar"><span class="small"><b>${blockName(g.length)}</b> · ejercicio ${at+1} de ${g.length}. ${round?'Al terminar esta serie cierras la vuelta: descansa y vuelve al primero.':'Al terminar esta serie, sigue sin descanso con el siguiente.'}</span>
+      <button class="btn sm pri" data-log="${nid}|${esc(logCtx.key)}|${nxt}" data-next="${round?'round':'1'}">${round?'⏱ Descansar y volver a':'→ Siguiente:'} ${esc(dn(byId[nid]))}</button></div>`;
+  }
+  const typed = rows.some(s=>s.t);
+  const weightRow = (s, i) => {
+    const T = SET_TYPES[s.t||'n'];
+    let h = `<button class="ln-n st ${s.t?'t-'+s.t:''}" data-stype="${i}" aria-expanded="${stypeOpen===i}" aria-label="Serie ${i+1}: ${T.name}. Cambiar tipo de serie">${T.tag || i+1}</button>
+      <input type="text" inputmode="decimal" autocomplete="off" id="lw${i}" data-lw="${i}" value="${s.w>0?fmtNum(inUnit(s,u)):num(s.w)}" placeholder="${hintW(i)}" aria-label="Peso de la serie ${i+1} en ${u}"><span class="muted">×</span><input type="text" inputmode="numeric" autocomplete="off" id="lr${i}" data-lr="${i}" value="${num(s.r)}" placeholder="${hint(i).r??''}" aria-label="Repeticiones de la serie ${i+1}">
+      <button class="ib" data-delset="${i}" aria-label="Quitar serie ${i+1}">✕</button>`;
+    if(stypeOpen===i) h += `<div class="stypes"><div class="chips">${Object.entries(SET_TYPES).map(([k,x])=>`<button class="chip ${(s.t||'n')===k?'on':''}" data-settype="${i}|${k}">${x.name}</button>`).join('')}</div>
+      ${T.help?`<p class="small muted" style="margin:6px 0 0">${T.help}</p>`:''}</div>`;
+    if(s.t==='d' || s.t==='rp'){
+      (s.dr||[]).forEach((x, j)=>{
+        h += `<span class="ln-n drop" aria-hidden="true">↳</span>${s.t==='rp'
+          ? `<span class="small muted rpw">pausa 10–15 s</span><span class="muted">+</span>`
+          : `<input type="text" inputmode="decimal" autocomplete="off" data-ldw="${i}|${j}" value="${num(x.w)}" aria-label="Peso de la bajada ${j+1} de la serie ${i+1} en ${u}"><span class="muted">×</span>`}
+          <input type="text" inputmode="numeric" autocomplete="off" data-ldr="${i}|${j}" value="${num(x.r)}" aria-label="Repeticiones del tramo ${j+1} de la serie ${i+1}">
+          <button class="ib" data-deldrop="${i}|${j}" aria-label="Quitar tramo ${j+1}">✕</button>`;
+      });
+      h += `<span></span><button class="btn sm dropadd" data-adddrop="${i}">＋ ${s.t==='rp'?'Otra mini serie':'Otra bajada'}</button>`;
+    }
+    return h;
+  };
   box.innerHTML = `<h4 class="sec">Registrar</h4>
     <div class="logbox">
+      ${ssBar}
       <div class="logtop">
         <label class="small muted" for="logDate">Fecha</label>
         <input type="date" id="logDate" data-logdate value="${logDate}" max="${isoDate()}">
@@ -1235,11 +1426,14 @@ function renderLog(id){
       ${atTop?`<p class="small" style="margin:6px 0 0">Llegaste al tope de repeticiones: prueba subir un poco el peso.</p>`:''}
       ${rows.length?`<div class="lsets ${type}">
         ${type==='time'?`<span></span><span class="lh">Minutos</span><span></span>`:`<span></span><span class="lh">Peso (${u})</span><span></span><span class="lh">Reps</span><span></span>`}
-        ${rows.map((s,i)=>`<span class="ln-n">${i+1}</span>${type==='time'
-          ? `<input type="text" inputmode="decimal" autocomplete="off" id="lm${i}" data-lm="${i}" value="${num(s.m)}" placeholder="${hint(i).m!=null?num(hint(i).m):''}" aria-label="Minutos de la serie ${i+1}">`
-          : `<input type="text" inputmode="decimal" autocomplete="off" id="lw${i}" data-lw="${i}" value="${s.w>0?fmtNum(inUnit(s,u)):num(s.w)}" placeholder="${hintW(i)}" aria-label="Peso de la serie ${i+1} en ${u}"><span class="muted">×</span><input type="text" inputmode="numeric" autocomplete="off" id="lr${i}" data-lr="${i}" value="${num(s.r)}" placeholder="${hint(i).r??''}" aria-label="Repeticiones de la serie ${i+1}">`}
-          <button class="ib" data-delset="${i}" aria-label="Quitar serie ${i+1}">✕</button>`).join('')}
-      </div>`:''}
+        ${rows.map((s,i)=>type==='time'
+          ? `<span class="ln-n">${i+1}</span><input type="text" inputmode="decimal" autocomplete="off" id="lm${i}" data-lm="${i}" value="${num(s.m)}" placeholder="${hint(i).m!=null?num(hint(i).m):''}" aria-label="Minutos de la serie ${i+1}">
+            <button class="ib" data-delset="${i}" aria-label="Quitar serie ${i+1}">✕</button>`
+          : weightRow(s, i)).join('')}
+      </div>
+      ${type==='weight' && !typed && stypeOpen==null ? `<p class="small muted" style="margin:6px 0 0">Toca el número de una serie para marcarla como calentamiento, drop set, al fallo o rest-pause.</p>` : ''}`:''}
+      ${type==='weight' && rows.length ? `<div class="nextmode"><span class="small muted">Próxima serie:</span><div class="chips">${[['igual','Igual'],['sube','Pirámide ↑'],['baja','Pirámide ↓']].map(([k,n])=>`<button class="chip ${nextMode===k?'on':''}" data-nextmode="${k}" aria-pressed="${nextMode===k}">${n}</button>`).join('')}</div></div>
+        ${nextMode!=='igual'?`<p class="small muted" style="margin:4px 0 0">${nextMode==='sube'?`Cada serie nueva sube ${u==='lb'?'5 lb':'2,5 kg'} y baja 2 repeticiones.`:`Cada serie nueva baja ${u==='lb'?'5 lb':'2,5 kg'} y sube 2 repeticiones.`}</p>`:''}` : ''}
       <div class="row" style="margin:10px 0 0">
         <button class="btn sm" data-addset>＋ Agregar ${type==='time'?'sesión':'serie'}</button>
         ${type==='weight'?`<button class="btn sm" data-rest="start">⏱ Descanso ${fmtRest(restSeconds(e))}</button>`:''}
@@ -1289,7 +1483,7 @@ function renderProgress(){
 let openId = null, pickOpen = false;
 function openDetail(id, keep){
   const e = byId[id]; if(!e) return;
-  if(!keep){ pickOpen = false; logDate = isoDate(); logDel = null; logAll = false; }
+  if(!keep){ pickOpen = false; logDate = isoDate(); logDel = null; logAll = false; logCtx = null; stypeOpen = null; nextMode = 'igual'; }
   openId = id;
   const k = KIND[id], rx = prescription(e);
   const t = k ? SPECIAL[k.kind].tips : (TIPS[e.t] || {do:[],avoid:[]});
@@ -1380,7 +1574,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest],[data-swap],[data-swapto],[data-unswap],[data-swapsearch]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest],[data-swap],[data-swapto],[data-unswap],[data-swapsearch],[data-link],[data-splitopen],[data-split],[data-splitmake],[data-splitcancel],[data-splitundo],[data-stype],[data-settype],[data-adddrop],[data-deldrop],[data-nextmode]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -1406,7 +1600,8 @@ document.addEventListener('click', ev=>{
     const u = d.unit; state.units = state.units || {};
     state.units[openId] = u;
     const en = entryFor(openId, logDate);
-    if(en) for(const s of en.s) if(s.w>0 && (s.u||'kg')!==u){ s.w = inUnit(s, u); if(u==='lb') s.u = 'lb'; else delete s.u; }
+    const conv = s => { if(s.w>0 && (s.u||'kg')!==u){ s.w = inUnit(s, u); if(u==='lb') s.u = 'lb'; else delete s.u; } };
+    if(en) for(const s of en.s){ if(s.t==='d') (s.dr||[]).forEach(conv); conv(s); }
     save(); renderLog(openId); return;
   }
   if('punit' in d){ state.profile.unit = d.punit; save(); render(); return; }
@@ -1448,7 +1643,10 @@ document.addEventListener('click', ev=>{
       toast(`Hoy: ${dn(byId[alt])}`);
     } else {
       const l = listOf(day), i = l.indexOf(id);
-      if(i>=0){ if(l.includes(alt)) l.splice(i,1); else l[i] = alt; }
+      if(i>=0){
+        if(l.includes(alt)){ unlinkRemoved(day, l, i); l.splice(i,1); }
+        else { if(state.links[linkKey(day,id)]){ delete state.links[linkKey(day,id)]; state.links[linkKey(day,alt)] = true; } l[i] = alt; }
+      }
       delete state.subs[`${todayKey()}|${day}|${id}`];
       toast(`Rutina actualizada: ${dn(byId[alt])}`);
     }
@@ -1459,7 +1657,36 @@ document.addEventListener('click', ev=>{
     if(fromSearch) view = {tab:'routine', zone:null, target:'', equip:'', q:'', limit:40};
     render(); return;
   }
-  if('rm' in d){ const [day,id] = d.rm.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>=0) l.splice(i,1); save(); render(); return; }
+  if('rm' in d){ const [day,id] = d.rm.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>=0){ unlinkRemoved(day, l, i); l.splice(i,1); } save(); render(); return; }
+  if('link' in d){
+    const [day, id] = d.link.split('|'), k = linkKey(day, id);
+    if(state.links[k]) delete state.links[k]; else state.links[k] = true;
+    save(); render();
+    toast(state.links[k] ? `${blockName(groupOf(day, id).length)} creada` : 'Ejercicios separados');
+    return;
+  }
+  if('splitopen' in d){
+    splitOpen = {pick:SPLITS[state.profile.split] ? state.profile.split : null, fill:true};
+    view = {tab:'routine', sub:'sesiones', zone:null, target:'', equip:'', q:'', limit:40};
+    render(); scrollTo(0,0); return;
+  }
+  if('split' in d){ splitOpen.pick = d.split; render(); return; }
+  if('splitcancel' in d){ if(splitOpen && splitOpen.first && !state.profile.split){ state.profile.split = 'propia'; save(); } splitOpen = null; render(); return; }
+  if('splitmake' in d){
+    applySplit(splitOpen.pick, splitOpen.fill && splitOpen.pick!=='cero');
+    const name = SPLITS[splitOpen.pick].name;
+    splitOpen = null; planOpen = null; planEdit = null; planReview = null;
+    render(); scrollTo(0,0); toast(`Rutina ${name} creada`); return;
+  }
+  if('splitundo' in d){
+    if(d.splitundo==='back' && state.plansPrev){
+      const cur = {plans:state.plans, split:state.profile.split || null};
+      for(const p of state.plans) if(!state.archived.some(a=>a.id===p.id)) state.archived.push({id:p.id, name:p.name, ...(p.kind?{kind:p.kind}:{})});
+      state.plans = state.plansPrev.plans; state.profile.split = state.plansPrev.split || undefined;
+      state.plansPrev = cur; toast('Recuperaste tus sesiones anteriores');
+    } else { state.plansPrev = null; toast('Listo'); }
+    planOpen = null; save(); render(); return;
+  }
   if('up' in d){ const [day,id] = d.up.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>0){ [l[i-1],l[i]] = [l[i],l[i-1]]; save(); render(); } return; }
   if('clear' in d){
     if(d.clear==='ask') confirmClear = true;
@@ -1555,21 +1782,51 @@ document.addEventListener('click', ev=>{
     return;
   }
   if('log' in d){
-    openDetail(d.log);
-    if(!entryFor(d.log, logDate)){ addSet(d.log, true); renderLog(d.log); }
+    /* data-log = "id|día o sesión|id en la rutina": con eso se sabe si va en una superserie */
+    const [id, key, orig] = d.log.split('|');
+    openDetail(id); logCtx = key ? {key, orig} : null;
+    const en = entryFor(id, logDate), last = en && en.s[en.s.length-1];
+    if(!en) addSet(id, true);
+    /* en una superserie, al pasar al siguiente ejercicio ya hay una serie nueva lista */
+    else if('next' in d && last && validSet(last)) addSet(id);
+    if(d.next==='round') restStart(restSeconds(byId[id]));
+    renderLog(id);
     $('#logBox').scrollIntoView({block:'start'});
     return;
   }
+  if('stype' in d){ stypeOpen = stypeOpen===+d.stype ? null : +d.stype; renderLog(openId); return; }
+  if('settype' in d){
+    const [i, t] = d.settype.split('|'), en = entryFor(openId, logDate), s = en && en.s[+i];
+    if(s){
+      if(t==='n') delete s.t; else s.t = t;
+      if(t==='d' || t==='rp'){ if(!s.dr || !s.dr.length) s.dr = [newDrop(s, t)]; } else delete s.dr;
+      save(); renderLog(openId);
+    }
+    return;
+  }
+  if('adddrop' in d){
+    const en = entryFor(openId, logDate), s = en && en.s[+d.adddrop];
+    if(s){ s.dr = s.dr || []; s.dr.push(newDrop(s.dr[s.dr.length-1] || s, s.t)); save(); renderLog(openId); }
+    return;
+  }
+  if('deldrop' in d){
+    const [i, j] = d.deldrop.split('|').map(Number), en = entryFor(openId, logDate), s = en && en.s[i];
+    if(s && s.dr){ s.dr.splice(j, 1); save(); renderLog(openId); }
+    return;
+  }
+  if('nextmode' in d){ nextMode = d.nextmode; renderLog(openId); return; }
   if('loghist' in d){ openDetail(d.loghist); const h = $('#logHist'); if(h) h.scrollIntoView({block:'start'}); return; }
   if('addset' in d){
     /* si ya había una serie anotada hoy, terminarla = empezar el descanso */
     const before = entryFor(openId, logDate), weight = logType(byId[openId])==='weight';
-    if(weight && before && before.s.some(validSet) && logDate===isoDate()) restStart(restSeconds(byId[openId]));
-    addSet(openId); renderLog(openId);
+    /* en medio de una superserie no se descansa: el descanso va al cerrar la vuelta */
+    const g = logCtx ? groupOf(logCtx.key, logCtx.orig) : [], midBlock = g.length>1 && g[g.length-1]!==logCtx.orig;
+    if(weight && before && before.s.some(validSet) && logDate===isoDate() && !midBlock) restStart(restSeconds(byId[openId]));
+    stypeOpen = null; addSet(openId); renderLog(openId);
     const inputs = document.querySelectorAll('.lsets input'); if(inputs.length) inputs[inputs.length - (logType(byId[openId])==='time'?1:2)].focus();
     return;
   }
-  if('delset' in d){ const en = entryFor(openId, logDate); if(en){ en.s.splice(+d.delset, 1); save(); renderLog(openId); } return; }
+  if('delset' in d){ const en = entryFor(openId, logDate); if(en){ en.s.splice(+d.delset, 1); stypeOpen = null; save(); renderLog(openId); } return; }
   if('editsess' in d){ pruneLog(openId); logDate = d.editsess; logDel = null; renderLog(openId); $('#logBox').scrollIntoView({block:'start'}); return; }
   if('delsess' in d){
     if(d.delsess==='no') logDel = null;
@@ -1618,6 +1875,7 @@ document.addEventListener('change', ev=>{
   }
   else if(t.matches('[data-plact]')){ const p = planById(t.dataset.plact); if(p){ p.actType = t.value; save(); render(); } }
   else if(t.matches('[data-swapforever]')){ swapForever = t.checked; }
+  else if(t.matches('[data-splitfill]')){ if(splitOpen) splitOpen.fill = t.checked; }
   else if(t.matches('[data-plopt]')){ const p = planById(t.dataset.plopt); if(p){ p.opt = t.checked; save(); render(); } }
   else if(t.matches('[data-logdate]')){
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
@@ -1651,6 +1909,15 @@ document.addEventListener('input', ev=>{
     let en = entryFor(openId, logDate);
     if(!en){ en = {d:logDate, s:[]}; list.push(en); list.sort((a,b)=>a.d<b.d?-1:1); }
     const v = t.value.trim(); if(v) en.n = t.value.slice(0,300); else delete en.n;
+    save(); renderLogHist(openId);
+  } else if(t.matches('[data-ldw],[data-ldr]')){
+    /* tramos de drop set o rest-pause */
+    const [i, j] = (t.dataset.ldw ?? t.dataset.ldr).split('|').map(Number);
+    const en = entryFor(openId, logDate), x = en && en.s[i] && en.s[i].dr && en.s[i].dr[j];
+    if(!x) return;
+    const n = parseNum(t.value);
+    if('ldw' in t.dataset){ x.w = n===null ? null : Math.round(n*100)/100; if(unitOf(openId)==='lb') x.u = 'lb'; else delete x.u; }
+    else x.r = n===null ? null : Math.round(n);
     save(); renderLogHist(openId);
   } else if(t.matches('[data-lw],[data-lr],[data-lm]')){
     const en = entryFor(openId, logDate), s = en && en.s[+(t.dataset.lw ?? t.dataset.lr ?? t.dataset.lm)];

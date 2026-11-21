@@ -4,7 +4,10 @@ App web (PWA) para ver ejercicios por zona, con pasos en español, consejos de t
 
 - 1.324 ejercicios de [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) (MIT).
 - Las miniaturas y animaciones se cargan una a una desde ese repositorio (commit fijo) y el service worker las guarda en el dispositivo: cada imagen se descarga una sola vez.
+- Tipos de rutina: Empuje/Tirón/Pierna, Full body, Torso/Pierna, por músculo, glúteos y piernas o desde cero; la app arma las sesiones según nivel y equipo.
+- Superseries, triseries y circuitos: ejercicios unidos que se hacen sin descanso entre ellos.
 - Registro de peso, repeticiones y minutos por ejercicio (con notas) y de otras actividades (bici, cerro, caminata…), con gráfico de progreso.
+- Tipos de serie: calentamiento, drop set, al fallo y rest-pause, y pirámide (subir o bajar el peso en cada serie).
 - Rutina, registros, favoritos y perfil se guardan en el navegador. Para pasarlos a otro dispositivo: Perfil → Copia de seguridad.
 - Animaciones © Gym visual — https://gymvisual.com/
 
