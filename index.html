@@ -105,7 +105,9 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 /* detalle */
 .sheet{position:fixed;inset:0;background:rgba(10,12,14,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheet[hidden]{display:none}
-.sheet .box{background:var(--surface);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .2s ease-out}
+.sheet{overscroll-behavior:contain}
+.sheet-open nav.tabs{visibility:hidden}
+.sheet .box{background:var(--surface);width:100%;max-width:720px;max-height:92vh;max-height:92dvh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:20px 20px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));animation:up .2s ease-out}
 @media(min-width:780px){.sheet{align-items:center}.sheet .box{border-radius:20px;padding:22px}}
 @keyframes up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion: reduce){.sheet .box{animation:none}.zone{transition:none}}
@@ -264,6 +266,37 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .fh b{font-family:var(--f-display);font-size:18px;text-transform:uppercase}
 .fl{display:flex;flex-direction:column;width:100%;background:none;border:0;border-top:1px solid var(--line);text-align:left;padding:7px 0;margin-top:6px;min-width:0}
 .fl .fn{font-weight:600;overflow-wrap:anywhere}
+button.fh{width:100%;background:none;border:0;padding:0;text-align:left}
+.go{color:var(--accent);font-weight:600}
+/* inicio */
+.hero{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.hero .when{display:block;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.hero > b{display:block;font-family:var(--f-display);font-size:26px;font-weight:700;text-transform:uppercase;line-height:1.05;margin:2px 0 4px}
+.hero.live{background:var(--accent-soft)}
+.lastlist{list-style:none;margin:8px 0 0;padding:0}
+.lastlist li{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--line);font-size:14px}
+.lastlist li span:first-child{overflow-wrap:anywhere;min-width:0}
+.lastlist li span:last-child{flex:none;text-align:right;font-variant-numeric:tabular-nums}
+.lastwk{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.lastwk .when{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lastwk b{font-family:var(--f-display);font-size:20px;text-transform:uppercase}
+.wkstrip{margin-top:0}
+/* agregar ejercicio en el lugar */
+.picker{background:var(--surface2);border-radius:12px;padding:10px;margin-top:10px}
+.picker .srow .btn{flex:none;min-width:40px;justify-content:center}
+/* terminar entreno */
+.finish{border:1px solid var(--accent);background:var(--surface)}
+.finish .ttl{font-family:var(--f-display);font-size:20px;text-transform:uppercase}
+.chg{margin:0;padding-left:18px}
+.chg li{margin:2px 0}
+/* ficha del día */
+.fl.dx{gap:3px}
+.day > .fl:first-child{border-top:0;margin-top:0;padding-top:0}
+.fl.dx .set{display:inline-block;margin-right:10px;font-variant-numeric:tabular-nums}
+.cmp{color:var(--muted)}
+.cmp.up,.up{color:var(--ok)}
+.cmp.down,.down{color:var(--warn)}
+.cmp.new{color:var(--act)}
 .note{display:block;font-style:italic;color:var(--ink);margin-top:2px;overflow-wrap:anywhere}
 .logbox textarea{width:100%;min-width:0;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;resize:vertical;margin-top:4px}
 .actform{margin:4px 0 10px}
@@ -292,7 +325,7 @@ ol.steps li::before{content:counter(s);position:absolute;left:0;top:8px;width:28
 .gt span{color:var(--muted);font-size:14px}
 
 /* pestañas */
-nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:10;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.tabs{transform:translateZ(0);position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);z-index:10;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 nav.tabs .in{display:flex;max-width:560px;margin:0 auto}
 nav.tabs button{flex:1;background:none;border:0;padding:10px 2px 12px;color:var(--muted);font-family:var(--f-display);font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-top:3px solid transparent}
 nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
@@ -313,7 +346,7 @@ nav.tabs button.on{color:var(--ink);border-top-color:var(--accent)}
 <div class="wrap" id="app"><div class="empty">Cargando ejercicios…</div></div>
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"><div class="box" id="sheetBox"></div></div>
 <nav class="tabs"><div class="in">
-  <button data-tab="home" class="on">Zonas</button>
+  <button data-tab="home" class="on">Inicio</button>
   <button data-tab="explore">Buscar</button>
   <button data-tab="routine">Rutina</button>
   <button data-tab="favs">Favoritos</button>
@@ -561,11 +594,12 @@ const DAYS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Doming
 const KEY = 'migym.v1';
 const fresh = () => ({
   profile:{name:'', goal:'hipertrofia', level:'principiante', equip:[], onlyMine:false, unit:'kg'},
-  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), done:{}, log:{},
+  favs:[], routine:Object.fromEntries(DAYS.map(d=>[d,[]])), log:{},
   /* Otras actividades: [{id, d:'AAAA-MM-DD', type, min, km, note}] */
   acts:[], units:{},
-  /* cambios de hoy: "fecha|día o sesión|id original" -> id del equivalente */
-  subs:{},
+  /* Entrenos: [{id, d, start, end?, key (sesión o día de origen), name, ids, orig, done:{id:true}, from:{idNuevo:idOriginal}}]
+     active = id del entreno en curso */
+  workouts:[], active:null,
   /* Rutina por sesiones: van en orden, sin día fijo. opt = "a veces": no entra en el ciclo del próximo entreno */
   routineMode:'semana', planLog:[],
   /* superseries: "día o sesión|id" -> true = ese ejercicio va unido con el siguiente */
@@ -586,11 +620,11 @@ function normalize(s){
     profile:Object.assign(base.profile, s.profile||{}),
     favs:Array.isArray(s.favs)?s.favs:[],
     routine:Object.assign(base.routine, s.routine||{}),
-    done:(s.done && typeof s.done==='object')?s.done:{},
     log:(s.log && typeof s.log==='object')?s.log:{},
     acts:Array.isArray(s.acts)?s.acts:[],
     units:(s.units && typeof s.units==='object')?s.units:{},
-    subs:(s.subs && typeof s.subs==='object')?s.subs:{},
+    workouts:Array.isArray(s.workouts)?s.workouts:[],
+    active:typeof s.active==='string'?s.active:null,
     routineMode:s.routineMode==='sesiones'?'sesiones':'semana',
     planLog:Array.isArray(s.planLog)?s.planLog:[],
     plans:Array.isArray(s.plans)?s.plans:base.plans,
@@ -604,12 +638,12 @@ let state = (()=>{ try{ return normalize(JSON.parse(localStorage.getItem(KEY)));
 /* Se guarda en este dispositivo; para pasarlo a otro, Perfil > Copia de seguridad */
 function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(_){} }
 const save = saveLocal;
-const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log, acts:state.acts, units:state.units, routineMode:state.routineMode, plans:state.plans, planLog:state.planLog, links:state.links, archived:state.archived}))));
+const backupCode = () => btoa(unescape(encodeURIComponent(JSON.stringify({profile:state.profile, favs:state.favs, routine:state.routine, log:state.log, acts:state.acts, units:state.units, routineMode:state.routineMode, plans:state.plans, planLog:state.planLog, links:state.links, archived:state.archived, workouts:state.workouts, active:state.active}))));
 function restoreCode(code){
   const s = JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
   if(!s || !s.routine) throw new Error('formato');
   /* los códigos antiguos no traen estos datos: se conservan los de este dispositivo */
-  for(const k of ['log','acts','units','plans','planLog','routineMode','links','archived']) if(!s[k]) s[k] = state[k];
+  for(const k of ['log','acts','units','plans','planLog','routineMode','links','archived','workouts','active']) if(!s[k]) s[k] = state[k];
   state = normalize(s); save();
 }
 
@@ -713,16 +747,18 @@ function renderHome(){
       ${filtersHTML(base)}${listHTML(applyFilters(base))}`;
     return;
   }
+  const now = new Date(), h = now.getHours();
+  const hello = h<12 ? 'Buenos días' : h<20 ? 'Buenas tardes' : 'Buenas noches';
   app.innerHTML = `
     <div class="top"><div><h1>Mi <em>Gym</em></h1>
-      <div class="sub">${p.name?`Hola, ${esc(p.name)} · `:''}${esc(GOALS[p.goal].name)} · ${esc(LEVELS[p.level])}</div></div></div>
+      <div class="sub">${hello}${p.name?`, ${esc(p.name)}`:''} · ${WEEKDAY[now.getDay()]} ${fmtDate(isoDate())}</div></div></div>
+    ${isNewUser() ? `<div class="hero"><span class="when">Bienvenida · Para empezar</span>
+      <b>Arma tu rutina</b><p class="small muted" style="margin:4px 0 8px">Full body, por músculo, empuje/tirón/pierna… Elige cómo entrenas y la app te propone los ejercicios según tu nivel y tu equipo (configúralos en Perfil).</p>
+      <div class="row"><button class="btn pri" data-splitopen>Elegir tipo de rutina</button></div></div>` : todayHTML()}
+    ${weekStrip()}
+    ${lastWorkoutHTML()}
+    <h2>Explorar ejercicios</h2>
     <input class="search" id="gq" data-gq placeholder="Buscar ejercicio, músculo o equipo…" autocomplete="off">
-    ${todayDoneHTML()}
-    ${todayHTML()}
-    ${isNewUser() ? `<div class="sugg" style="margin-top:14px"><span class="when">Para empezar</span>
-      <b>Arma tu rutina</b><p class="small muted" style="margin:4px 0 8px">Full body, por músculo, empuje/tirón/pierna… Elige cómo entrenas y la app te propone los ejercicios.</p>
-      <button class="btn sm pri" data-splitopen>Elegir tipo de rutina</button></div>` : ''}
-    <div class="row" style="margin-top:14px"><button class="btn sm" data-actnew>＋ Registrar actividad: bici, cerro, caminata…</button></div>
     <h2>Antes y después</h2>
     <div class="zones pair">${Object.entries(SPECIAL).map(([id,s])=>{ const n = s.groups.reduce((a,g)=>a+g.ids.length,0);
       return `<button class="zone sp" data-zone="${id}"><div><span class="when">${esc(s.when)}</span><b>${esc(s.name)}</b><div class="mus">${esc(s.mus)}</div></div><span class="cnt">${n} ejercicios</span></button>`; }).join('')}</div>
@@ -737,42 +773,141 @@ function renderHome(){
       <div><b>Descansa</b><span>Deja 48 h antes de volver a entrenar fuerte el mismo músculo y duerme 7–9 h.</span></div>
     </div>`;
 }
+/* Inicio: entreno en curso o el que toca, con lo que hiciste la última vez en cada ejercicio */
 function todayHTML(){
-  if(state.routineMode==='sesiones'){
-    const p = nextPlan();
-    if(!p || !p.ids.length) return '';
-    const done = p.ids.filter(id=>state.done[todayKey()+'|'+p.id+'|'+id]).length;
-    return `<h2>Próximo entreno · ${esc(planLabel(p))}</h2><div class="day"><div class="dh"><h4>${esc(p.name)}</h4><span class="muted small">${done} de ${p.ids.length} hechos</span></div>
-      <div class="progress"><i style="width:${Math.round(done/p.ids.length*100)}%"></i></div>${itemsHTML(p.id, p.ids, false)}
-      <div class="row"><button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button></div></div>`;
+  const w = activeWk();
+  if(w){
+    const n = w.ids.filter(id=>w.done[id]!==false && wkDone(w,id)).length;
+    return `<div class="hero live"><span class="when">Entreno en curso${w.d!==isoDate()?` · ${fmtDate(w.d)}`:''}</span><b>${esc(wkName(w))}</b>
+      <span class="small muted">${n} de ${w.ids.length} ejercicios · empezaste a las ${fmtTime(w.start)}</span>
+      <div class="progress"><i style="width:${w.ids.length?Math.round(n/w.ids.length*100):0}%"></i></div>
+      <div class="row"><button class="btn pri" data-wkopen>Continuar entreno</button></div></div>`;
   }
-  const d = todayName(), ids = state.routine[d] || [];
-  if(!ids.length) return '';
-  const done = ids.filter(id=>state.done[todayKey()+'|'+d+'|'+id]).length;
-  return `<h2>Hoy · ${d}</h2><div class="day"><div class="dh"><span class="muted small">${done} de ${ids.length} hechos</span></div>
-    <div class="progress"><i style="width:${Math.round(done/ids.length*100)}%"></i></div>${itemsHTML(d, ids, false)}</div>`;
+  const byPlan = state.routineMode==='sesiones';
+  const p = byPlan ? nextPlan() : null, key = byPlan ? p && p.id : todayName(), ids = key ? listOf(key) || [] : [];
+  const today = isoDate(), doneToday = state.workouts.filter(x=>x.d===today && x.end);
+  const did = doneToday.length ? `<p class="small" style="margin:0 0 8px">✓ Hoy ya hiciste <b>${esc(doneToday.map(wkName).join(' + '))}</b>.</p>` : '';
+  if(p && p.kind==='act') return `<div class="hero">${did}<span class="when">Te toca · ${esc(planLabel(p))}</span><b>${esc(p.name)}</b>
+    <div class="row"><button class="btn pri" data-actnew="${esc(p.id)}">Registrar ${esc((ACT_SHORT[p.actType]||'actividad').toLowerCase())}</button></div></div>`;
+  if(!ids.length) return `<div class="hero">${did}<span class="when">${byPlan?'Próximo entreno':`Hoy · ${todayName()}`}</span>
+    <b>${byPlan ? 'Tu sesión está vacía' : 'Día de descanso'}</b>
+    <span class="small muted">${byPlan ? 'Agrégale ejercicios en Rutina.' : 'Tu rutina no tiene ejercicios para hoy.'}</span>
+    <div class="row"><button class="btn sm" data-wkstart="">Entreno libre</button></div></div>`;
+  const rows = ids.slice(0, 8).map(id=>{ const e = byId[id]; if(!e) return ''; const last = sessions(id).filter(x=>x.d<today).pop();
+    return `<li><span>${esc(dn(e))}</span><span class="muted">${last ? esc(setText(bestSet(last))) : 'Primera vez'}</span></li>`; }).join('');
+  return `<div class="hero">${did}<span class="when">${byPlan ? `${doneToday.length?'Después':'Te toca'} · ${esc(planLabel(p))}` : `Hoy · ${todayName()}`}</span>
+    <b>${esc(byPlan ? p.name : 'Tu rutina de hoy')}</b>
+    <ul class="lastlist" aria-label="Lo que hiciste la última vez">${rows}${ids.length>8?`<li class="muted">y ${ids.length-8} más</li>`:''}</ul>
+    <p class="small muted" style="margin:4px 0 0">A la derecha, tu mejor serie de la última vez.</p>
+    <div class="row"><button class="btn pri" data-wkstart="${esc(key)}">Empezar entreno</button><button class="btn sm" data-wkstart="">Entreno libre</button></div></div>`;
+}
+/* Último entreno terminado (o último día con gimnasio en el historial) */
+function lastWorkoutHTML(){
+  const today = isoDate();
+  let d = null;
+  for(let i=0; i<120 && !d; i++){ const x = addDays(today, -i); if(dayLog(x).gym) d = x; }
+  if(!d) return '';
+  const l = dayLog(d), sets = l.ex.reduce((a,o)=>a+o.x.s.length,0), kg = dayVolume(d), t = new Date(d+'T12:00');
+  return `<h2>Último entreno</h2><button class="lastwk" data-dayview="${d}">
+    <span class="when">${WEEKDAY[t.getDay()]} ${fmtDate(d)}${d===today?' · hoy':''}</span><b>${esc(dayTitle(l))}</b>
+    <span class="small muted">${l.ex.length} ${l.ex.length===1?'ejercicio':'ejercicios'} · ${sets} ${sets===1?'serie':'series'}${kg?` · ${fmtKg(kg)}`:''}</span>
+    <span class="small go">Ver el detalle →</span></button>`;
+}
+
+/* ---------- Pantalla del entreno ---------- */
+function renderWorkout(){
+  const w = activeWk();
+  if(!w){ view.tab = 'home'; renderHome(); return; }
+  const key = wkKey(w), n = w.ids.filter(id=>w.done[id]!==false && wkDone(w,id)).length, ch = w.key ? wkChanges(w) : null;
+  app.innerHTML = `<button class="back" data-tab="home">← Inicio</button>
+    <div class="top"><div><h1>${esc(wkName(w))}</h1><div class="sub">${w.d!==isoDate()?`${fmtDate(w.d)} · `:''}Empezaste a las ${fmtTime(w.start)} · ${n} de ${w.ids.length} hechos</div></div></div>
+    <div class="progress" style="margin:-6px 0 12px"><i style="width:${w.ids.length?Math.round(n/w.ids.length*100):0}%"></i></div>
+    <p class="small muted" style="margin:0 0 6px">Lo que cambies aquí (quitar, agregar, ⇄ cambiar, ordenar, superseries) es solo para este entreno: tu rutina no se toca.</p>
+    <div class="day">${w.ids.length ? itemsHTML(key, w.ids) : '<p class="muted small" style="margin:0">Todavía no hay ejercicios. Agrégalos abajo.</p>'}</div>
+    ${picker && picker.key===key ? pickerHTML() : `<div class="row"><button class="btn sm" data-pick="${esc(key)}">＋ Agregar ejercicio</button></div>`}
+    ${wkFinish ? finishHTML(w, ch) : wkDiscard
+      ? `<div class="dlg"><p class="small" style="margin:0">¿Descartar este entreno? Las series que anotaste se mantienen en tu historial.</p>
+          <div class="row"><button class="btn sm pri" data-wkdiscard="yes">Sí, descartar</button><button class="btn sm" data-wkdiscard="no">No</button></div></div>`
+      : `<div class="row" style="margin-top:16px"><button class="btn pri" data-wkfinish>Terminar entreno</button><button class="btn sm" data-wkdiscard="ask">Descartar</button></div>`}`;
+}
+function finishHTML(w, ch){
+  const nd = w.ids.filter(id=>!(w.done[id]!==false && wkDone(w,id)));
+  const list = ch ? [
+    ...ch.swapped.map(x=>`Cambiaste <b>${esc(dn(byId[x.from]))}</b> por <b>${esc(dn(byId[x.to]))}</b>`),
+    ...ch.added.map(id=>`Agregaste <b>${esc(dn(byId[id]))}</b>`),
+    ...ch.removed.map(id=>`Quitaste <b>${esc(dn(byId[id]))}</b>`),
+    ...(ch.reordered?['Cambiaste el orden']:[]), ...(ch.linked?['Cambiaste las superseries']:[])] : [];
+  return `<div class="dlg finish">
+    <b class="ttl">Terminar entreno</b>
+    ${nd.length?`<p class="small muted" style="margin:6px 0 0">Sin registrar: ${esc(nd.map(id=>dn(byId[id])).join(', '))}. Quedan como no hechos en este entreno.</p>`:''}
+    ${list.length ? `<p class="small" style="margin:10px 0 4px">Hoy hiciste cambios respecto de tu rutina (${esc(listName(w.key))}):</p>
+      <ul class="small chg">${list.map(x=>`<li>${x}</li>`).join('')}</ul>
+      <p class="small" style="margin:8px 0 0">¿Quieres que la rutina quede así para las próximas veces?</p>
+      <div class="row"><button class="btn sm pri" data-wkend="solo">Solo este entreno</button><button class="btn sm" data-wkend="rutina">Actualizar la rutina</button><button class="btn sm" data-wkfinish>Seguir entrenando</button></div>`
+    : `<div class="row"><button class="btn sm pri" data-wkend="solo">Terminar</button><button class="btn sm" data-wkfinish>Seguir entrenando</button></div>`}
+  </div>`;
+}
+
+/* ---------- Agregar ejercicio en el lugar (rutina, entreno o un día pasado) ----------
+   key = lista de destino; "h:AAAA-MM-DD" = anotar en un día pasado. Sin texto, muestra sugerencias. */
+let picker = null;
+function pickerHTML(){
+  return `<div class="picker">
+    <input class="search" id="pq" data-pq placeholder="Buscar ejercicio para agregar…" value="${esc(picker.q)}" autocomplete="off" aria-label="Buscar ejercicio para agregar">
+    <div id="pickRes">${pickResHTML()}</div>
+    <div class="row"><button class="btn sm" data-pickclose>Listo</button></div></div>`;
+}
+function pickSuggestions(key){
+  const list = listOf(key) || [], w = isWk(key) ? wkById(key.slice(2)) : null;
+  const plan = planById(key) || (w && w.key && planById(w.key));
+  const out = [];
+  if(plan && plan.kind!=='act'){
+    const r = Coach.review({...plan, ids:list}, coachCtx());
+    for(const m of [...r.missing, ...r.optional]) for(const id of m.sugg.slice(0,1)) out.push({id, note:`Te falta: ${m.slot.name}`});
+  }
+  for(const id of state.favs) out.push({id, note:'Favorito'});
+  return out.filter((x,i)=>byId[x.id] && out.findIndex(y=>y.id===x.id)===i).slice(0, 8);
+}
+function pickResHTML(){
+  const key = picker.key, hist = key.startsWith('h:'), list = hist ? [] : listOf(key) || [];
+  const q = picker.q.trim();
+  const items = q ? findEx(q, EX.filter(equipOk)).slice(0, 10).map(e=>({id:e.i, note:`${tr(TARGET,e.t)} · ${tr(EQUIP,e.q)}`})) : hist ? state.favs.filter(id=>byId[id]).map(id=>({id, note:'Favorito'})) : pickSuggestions(key);
+  if(!items.length) return `<p class="small muted" style="margin:8px 0 0">${q?'No encontré ejercicios con eso.':'Escribe el nombre, el músculo o la máquina.'}</p>`;
+  return `${q?'':`<p class="small muted" style="margin:8px 0 2px">${hist?'Tus favoritos:':'Sugerencias:'}</p>`}${items.map(x=>{ const e = byId[x.id], has = list.includes(x.id);
+    return `<div class="srow"><img class="th sm" data-th="${x.id}" alt="">
+      <button class="info" data-open="${x.id}"><b>${esc(dn(e))}</b><span class="muted small">${esc(x.note)}</span></button>
+      <button class="btn sm ${has?'':'pri'}" data-padd="${x.id}" aria-label="${has?'Quitar':'Agregar'} ${esc(dn(e))}">${has?'✓':'＋'}</button></div>`; }).join('')}`;
 }
 function renderExplore(){
   app.innerHTML = `<div class="top"><h1>Buscar</h1></div>
     <input class="search" id="q" data-q placeholder="Buscar ejercicio, músculo o equipo…" value="${esc(view.q)}" autocomplete="off">
     ${filtersHTML(EX)}${listHTML(applyFilters(EX))}`;
 }
+/* Un ejercicio de una lista. En la rutina (plantilla) se edita; en un entreno se marca, se registra
+   y los cambios valen solo para ese entreno. */
 function routineItem(d, id){
-  const orig = byId[id]; if(!orig) return '';
-  const key = todayKey()+'|'+d+'|'+id, done = !!state.done[key], isToday = !!planById(d) || d===todayName();
-  /* cambio de hoy: se muestra el equivalente, pero el ejercicio guardado en la rutina no cambia */
-  const sub = isToday && state.subs[key] && byId[state.subs[key]], e = sub || orig;
-  const rx = prescription(e), slot = `${d}|${id}`;
-  return `<div class="ritem ${done&&isToday?'done':''} ${sub?'swapped':''}">
-    ${isToday?`<input type="checkbox" data-done="${esc(key)}" ${done?'checked':''} aria-label="Marcar como hecho">`:''}
+  const e = byId[id]; if(!e) return '';
+  const w = isWk(d) ? wkById(d.slice(2)) : null;
+  const done = !!w && w.done[id]!==false && wkDone(w, id), orig = w && w.from[id] && byId[w.from[id]];
+  const rx = prescription(e), slot = `${d}|${id}`, line = logLine(id);
+  return `<div class="ritem ${done?'done':''} ${orig?'swapped':''}">
+    ${w?`<input type="checkbox" data-wdone="${esc(w.id)}|${id}" ${done?'checked':''} aria-label="Marcar ${esc(dn(e))} como hecho">`:''}
     <img class="th sm" data-th="${e.i}" alt="" data-open="${e.i}">
     <button class="info" data-open="${e.i}"><b>${esc(dn(e))}</b><span class="muted small">${rx.sets} × ${rx.reps} · ${rx.rest}</span></button>
     <button class="ib" data-swap="${esc(slot)}" aria-label="Cambiar por un ejercicio equivalente" aria-expanded="${swapOpen===slot}">⇄</button>
     <button class="ib" data-up="${esc(slot)}" aria-label="Subir">↑</button>
     <button class="ib" data-rm="${esc(slot)}" aria-label="Quitar">✕</button>
-    ${sub?`<div class="rlog swapnote"><span class="small">Hoy en vez de <b>${esc(dn(orig))}</b></span><button class="btn sm" data-unswap="${esc(key)}">Volver al original</button></div>`:''}
-    ${logType(e)?`<div class="rlog"><button class="btn sm" data-log="${e.i}|${esc(d)}|${id}">Registrar</button><span class="small muted">${esc(logLine(e.i))}</span></div>`:''}
-    ${swapOpen===slot ? swapHTML(d, id, isToday) : ''}</div>`;
+    ${orig?`<div class="rlog swapnote"><span class="small">En vez de <b>${esc(dn(orig))}</b></span><button class="btn sm" data-unswap="${esc(slot)}">Volver al original</button></div>`:''}
+    ${w && logType(e) ? `<div class="rlog"><button class="btn sm ${done?'':'pri'}" data-log="${e.i}|${esc(d)}|${id}">Registrar</button><span class="small muted">${esc(line)}</span></div>`
+      : !w && line ? `<div class="rlog"><span class="small muted">${esc(line)}</span></div>` : ''}
+    ${swapOpen===slot ? swapHTML(d, id, !!w) : ''}</div>`;
+}
+/* reemplaza el ejercicio i de una lista (y mueve su unión de superserie) */
+function replaceIn(key, list, i, alt){
+  if(list.includes(alt)){ unlinkRemoved(key, list, i); list.splice(i,1); return; }
+  const id = list[i];
+  if(state.links[linkKey(key,id)]){ delete state.links[linkKey(key,id)]; state.links[linkKey(key,alt)] = true; }
+  list[i] = alt;
 }
 
 /* ---------- Superseries ----------
@@ -786,8 +921,7 @@ function blocks(key, ids){
 }
 const groupOf = (key, id) => blocks(key, listOf(key) || []).find(b=>b.includes(id)) || [id];
 const blockName = n => n===2 ? 'Superserie' : n===3 ? 'Triserie' : 'Circuito';
-/* ejercicio que se hace hoy en ese lugar (con el cambio de hoy, si hay) */
-const shownId = (key, id) => { const s = state.subs[`${todayKey()}|${key}|${id}`]; return s && byId[s] && (planById(key) || key===todayName()) ? s : id; };
+const shownId = (key, id) => id;
 function itemsHTML(key, ids, edit = true){
   const all = blocks(key, ids);
   return all.map((b, bi)=>{
@@ -827,7 +961,7 @@ function swapHTML(d, id, isToday){
   const e = byId[id], alts = alternativesFor(e);
   return `<div class="swapbox">
     <p class="small" style="margin:0 0 4px"><b>Cambiar ${esc(dn(e))} por:</b></p>
-    ${isToday ? `<label class="tog"><input type="checkbox" id="swapForever" data-swapforever ${swapForever?'checked':''}> Cambiarlo también en la rutina (no solo hoy)</label>`
+    ${isToday ? (wkById(d.slice(2))||{}).key ? `<label class="tog"><input type="checkbox" id="swapForever" data-swapforever ${swapForever?'checked':''}> Cambiarlo también en la rutina (no solo en este entreno)</label>` : ''
       : `<p class="small muted" style="margin:0">Se reemplaza en la rutina.</p>`}
     ${alts.length ? alts.map(x=>`<div class="srow"><img class="th sm" data-th="${x.i}" data-open="${x.i}" alt="">
       <button class="info" data-open="${x.i}"><b>${esc(dn(x))}</b><span class="muted small">${esc(tr(EQUIP,x.q))}${x.t!==e.t?` · ${esc(tr(TARGET,x.t))}`:''}</span></button>
@@ -847,8 +981,64 @@ const planById = id => state.plans.find(p=>p.id===id);
 const planInfo = id => planById(id) || state.archived.find(a=>a.id===id);
 const planLabel = p => `Día ${state.plans.indexOf(p)+1}`;
 const lastDone = id => [...state.planLog].reverse().find(x=>x.id===id);
-const listOf = key => (planById(key) || {ids:state.routine[key]}).ids;
-const listName = key => { const p = planById(key); return p ? `${planLabel(p)} · ${p.name}` : key; };
+/* "key" de una lista: id de sesión (p…), nombre de día (Lunes…) o "w:<id>" para un entreno */
+const listOf = key => isWk(key) ? (wkById(key.slice(2))||{}).ids : (planById(key) || {ids:state.routine[key]}).ids;
+const listName = key => { if(isWk(key)) return 'el entreno de hoy'; const p = planById(key); return p ? `${planLabel(p)} · ${p.name}` : key; };
+
+/* ---------- Entrenos ----------
+   La rutina es la plantilla. Al tocar "Empezar entreno" se copia la sesión que toca en un entreno propio:
+   lo que se quite, agregue, cambie u ordene ahí no toca la rutina. Al terminar, si hubo cambios, se
+   pregunta si pasarlos también a la rutina. Cada entreno queda guardado (fecha, hora, ejercicios). */
+const isWk = key => typeof key==='string' && key.startsWith('w:');
+const wkById = id => state.workouts.find(w=>w.id===id);
+const activeWk = () => state.active && wkById(state.active) || null;
+const wkKey = w => 'w:'+w.id;
+const wkName = w => w.key && planById(w.key) ? planById(w.key).name : w.key && DAYS.includes(w.key) ? `Rutina del ${w.key.toLowerCase()}` : w.name || 'Entreno libre';
+function startWorkout(key){
+  const ids = key ? [...(listOf(key)||[])] : [];
+  const w = {id:'w'+Date.now(), d:isoDate(), start:Date.now(), key:key||null, name:key ? (planById(key)||{}).name || key : 'Entreno libre',
+    ids, orig:[...ids], done:{}, from:{}};
+  for(const id of ids) if(state.links[linkKey(key,id)]) state.links[linkKey(wkKey(w),id)] = true;
+  state.workouts.push(w); state.active = w.id;
+  pruneWorkouts(); save();
+  return w;
+}
+function pruneWorkouts(){
+  const keep = state.workouts.slice(-150), ids = new Set(keep.map(w=>'w:'+w.id));
+  state.workouts = keep;
+  for(const k of Object.keys(state.links)) if(k.startsWith('w:') && !ids.has(k.split('|')[0])) delete state.links[k];
+}
+/* hecho = marcado o con al menos una serie anotada ese día */
+const wkDone = (w, id) => !!w.done[id] || !!sessions(id).find(x=>x.d===w.d);
+/* diferencias entre el entreno y la plantilla de la rutina */
+function wkChanges(w){
+  const tpl = w.key ? listOf(w.key) : null; if(!tpl) return null;
+  const origOf = id => w.from[id] || id;
+  const swapped = w.ids.filter(id=>w.from[id] && tpl.includes(w.from[id])).map(id=>({from:w.from[id], to:id}));
+  const added = w.ids.filter(id=>!tpl.includes(origOf(id)));
+  const removed = tpl.filter(id=>!w.ids.some(x=>origOf(x)===id));
+  const kept = w.ids.map(origOf).filter(id=>tpl.includes(id)), tplKept = tpl.filter(id=>kept.includes(id));
+  const reordered = kept.some((id,i)=>id!==tplKept[i]);
+  const lw = w.ids.filter(id=>state.links[linkKey(wkKey(w),id)]).map(origOf).sort().join(',');
+  const lt = tpl.filter(id=>state.links[linkKey(w.key,id)]).sort().join(',');
+  const linked = lw!==lt;
+  const any = swapped.length || added.length || removed.length || reordered || linked;
+  return any ? {swapped, added, removed, reordered, linked} : null;
+}
+function applyToRoutine(w){
+  const tpl = listOf(w.key); if(!tpl) return;
+  for(const k of Object.keys(state.links)) if(k.startsWith(w.key+'|')) delete state.links[k];
+  tpl.splice(0, tpl.length, ...w.ids);
+  for(const id of w.ids) if(state.links[linkKey(wkKey(w),id)]) state.links[linkKey(w.key,id)] = true;
+}
+function finishWorkout(w){
+  w.end = Date.now();
+  if(w.key && planById(w.key)) finishPlan(w.key, w.d);
+  state.active = null; save();
+}
+const fmtDur = ms => { const m = Math.max(1, Math.round(ms/60000)); return m>=60 ? `${Math.floor(m/60)} h ${String(m%60).padStart(2,'0')} min` : `${m} min`; };
+const fmtTime = t => { const x = new Date(t); return `${x.getHours()}:${String(x.getMinutes()).padStart(2,'0')}`; };
+let wkFinish = false, wkDiscard = false;
 function nextPlan(){
   const main = state.plans.filter(p=>!p.opt);
   if(!main.length) return state.plans[0] || null;
@@ -950,7 +1140,7 @@ function splitHTML(){
 function renderPlans(){
   const next = nextPlan(), open = planOpen || (next && next.id), today = isoDate();
   if(!splitOpen && isNewUser()) splitOpen = {pick:null, fill:true, first:true};
-  return `<p class="sub" style="margin:0 0 12px">Sin días fijos: van en orden y la app te marca cuál sigue.</p>
+  return `<p class="sub" style="margin:0 0 12px">Sin días fijos: van en orden y la app te marca cuál sigue. Esta es tu plantilla: lo que cambies en un entreno no la modifica.</p>
     ${splitOpen ? splitHTML() : `<div class="splitbar"><span class="small">Tipo de rutina: <b>${esc(splitName())}</b></span><button class="btn sm" data-splitopen>Cambiar</button></div>`}
     ${state.plansPrev ? `<div class="undo"><span class="small">Cambiaste el tipo de rutina. Tus sesiones anteriores están guardadas.</span>
       <div class="row" style="margin-top:6px"><button class="btn sm" data-splitundo="back">Recuperar las anteriores</button><button class="btn sm" data-splitundo="drop">Descartarlas</button></div></div>` : ''}
@@ -978,12 +1168,14 @@ function renderPlans(){
           <span class="muted small">${esc(info)}${zs&&isOpen?`<br>${esc(zs)}`:''}</span>
         </button>
         ${isOpen?`${itemsHTML(p.id, p.ids)}
-          ${p.ids.length?'':`<p class="muted small" style="margin:8px 0 0">Aún no tiene ejercicios. Toca <b>Agregar ejercicio</b>, abre uno y elige esta sesión.</p>`}
+          ${p.ids.length?'':`<p class="muted small" style="margin:8px 0 0">Aún no tiene ejercicios. Toca <b>＋ Agregar ejercicio</b>.</p>`}
+          ${picker && picker.key===p.id ? pickerHTML() : ''}
           <div class="row">
-            ${doneToday
-              ? `<button class="btn sm" data-plundo="${esc(p.id)}">Deshacer terminado</button>`
-              : `<button class="btn sm pri" data-plfinish="${esc(p.id)}">Terminar entreno</button>`}
-            <button class="btn sm" data-tab="home">＋ Agregar ejercicio</button>
+            ${activeWk() && activeWk().key===p.id
+              ? `<button class="btn sm pri" data-wkopen>Continuar entreno</button>`
+              : p.ids.length ? `<button class="btn sm pri" data-wkstart="${esc(p.id)}">Empezar entreno</button>` : ''}
+            ${doneToday && !state.workouts.some(w=>w.key===p.id && w.d===today) ? `<button class="btn sm" data-plundo="${esc(p.id)}">Deshacer terminado</button>` : ''}
+            ${picker && picker.key===p.id ? '' : `<button class="btn sm" data-pick="${esc(p.id)}">＋ Agregar ejercicio</button>`}
             <button class="btn sm" data-plreview="${esc(p.id)}" aria-expanded="${planReview===p.id}">Revisar sesión</button>
             <button class="btn sm" data-pledit="${esc(p.id)}">Editar</button>
           </div>
@@ -1065,14 +1257,15 @@ function renderRoutine(){
   app.innerHTML = `<div class="top"><div><h1>Mi rutina</h1>
     <div class="sub">Series y repeticiones para <b>${esc(GOALS[state.profile.goal].name)}</b>, nivel ${esc(LEVELS[state.profile.level].toLowerCase())}. Cámbialo en Perfil.</div></div></div>
     ${tabs}${weekStrip()}
-    ${!any?`<div class="empty">Tu rutina está vacía.<br>Abre un ejercicio y pulsa <b>Añadir a rutina</b>.</div>`:''}
-    ${any?DAYS.map(d=>{ const ids = state.routine[d];
+    ${!any?`<div class="empty">Tu rutina está vacía.<br>Toca <b>＋ Agregar ejercicio</b> en un día, o elige un tipo de rutina en <b>Por sesiones</b>.</div>`:''}
+    ${DAYS.map(d=>{ const ids = state.routine[d];
       const date = dateThisWeek(d), l = date<=isoDate() ? dayLog(date) : {any:false};
       const did = l.any ? `<div class="didrow"><span class="small muted">Hiciste:</span> ${doneHTML(l)}</div>` : '';
-      if(!ids.length) return `<div class="day ${l.any?'did':''}"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${l.any?'Fuera de la rutina':'Descanso'}</span></div>${did}</div>`;
+      const tools = `${picker && picker.key===d ? pickerHTML() : ''}<div class="row">${d===todayName() && ids.length ? (activeWk() && activeWk().key===d ? `<button class="btn sm pri" data-wkopen>Continuar entreno</button>` : `<button class="btn sm pri" data-wkstart="${d}">Empezar entreno</button>`) : ''}${picker && picker.key===d ? '' : `<button class="btn sm" data-pick="${d}">＋ Agregar ejercicio</button>`}</div>`;
+      if(!ids.length) return `<div class="day ${l.any?'did':''}"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${l.any?'Fuera de la rutina':'Descanso'}</span></div>${did}${tools}</div>`;
       const zs = [...new Set(ids.map(id=>byId[id]&&tr(TARGET,byId[id].t)).filter(Boolean))].join(', ');
-      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${did}${itemsHTML(d, ids)}</div>`;
-    }).join(''):''}
+      return `<div class="day"><div class="dh"><h4>${d}${d===todayName()?' · hoy':''}</h4><span class="muted small">${esc(zs)}</span></div>${did}${itemsHTML(d, ids)}${tools}</div>`;
+    }).join('')}
     ${any?`<div class="row">${confirmClear
       ? `<span class="small">¿Vaciar toda la rutina?</span><button class="btn sm pri" data-clear="yes">Sí, vaciar</button><button class="btn sm" data-clear="no">Cancelar</button>`
       : `<button class="btn sm" data-clear="ask">Vaciar rutina</button>`}</div>`:''}`;
@@ -1129,8 +1322,9 @@ function renderProfile(){
 }
 let mediaConfirm = false;
 function render(){
-  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===view.tab));
-  ({home:renderHome, explore:renderExplore, routine:renderRoutine, favs:renderFavs, profile:renderProfile})[view.tab]();
+  const navTab = view.tab==='workout' ? 'home' : view.tab==='day' ? ((view.from && view.from.tab) || 'home') : view.tab;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===navTab));
+  ({home:renderHome, explore:renderExplore, routine:renderRoutine, favs:renderFavs, profile:renderProfile, workout:renderWorkout, day:renderDay})[view.tab]();
   hydrateThumbs(app);
 }
 
@@ -1216,10 +1410,16 @@ const WEEKDAY = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const addDays = (d, n) => { const t = new Date(d+'T12:00'); t.setDate(t.getDate()+n); return isoDate(t); };
 function dayLog(d){
   const ex = Object.keys(state.log).map(id=>({id, x:sessions(id).find(x=>x.d===d)})).filter(o=>o.x && byId[o.id]);
-  const plans = state.planLog.filter(x=>x.d===d).map(x=>planInfo(x.id)).filter(p=>p && p.kind!=='act');
+  /* nombres: sesiones terminadas ese día y entrenos que no vienen de una sesión (por días o libres) */
+  const wks = state.workouts.filter(w=>w.d===d && w.end);
+  const plans = [...state.planLog.filter(x=>x.d===d).map(x=>planInfo(x.id)).filter(p=>p && p.kind!=='act'),
+    ...wks.filter(w=>!(w.key && planInfo(w.key))).map(w=>({id:w.id, name:wkName(w)}))];
   const acts = state.acts.filter(a=>a.d===d);
-  return {ex, plans, acts, gym:ex.length>0 || plans.length>0, any:ex.length>0 || plans.length>0 || acts.length>0};
+  return {ex, plans, acts, wks, gym:ex.length>0 || plans.length>0, any:ex.length>0 || plans.length>0 || acts.length>0};
 }
+const dayTitle = l => gymLabel(l);
+const dayVolume = d => Object.keys(state.log).reduce((a,id)=>{ const x = sessions(id).find(x=>x.d===d); return a + (x ? x.s.reduce((b,s)=>b+setVolume(s),0) : 0); }, 0);
+const fmtKg = kg => kg>=10000 ? `${fmtNum(Math.round(kg/100)/10)} t` : `${fmtNum(Math.round(kg))} kg`;
 function periodStats(from, to){
   const days = new Set(), gymDays = new Set();
   let sets = 0, kg = 0, min = 0, km = 0;
@@ -1228,6 +1428,7 @@ function periodStats(from, to){
     for(const s of x.s){ kg += setVolume(s); min += s.m||0; }
   }
   for(const x of state.planLog) if(x.d>=from && x.d<=to){ const p = planInfo(x.id); if(p && p.kind!=='act'){ days.add(x.d); gymDays.add(x.d); } }
+  for(const w of state.workouts) if(w.end && w.d>=from && w.d<=to){ days.add(w.d); gymDays.add(w.d); }
   for(const a of state.acts) if(a.d>=from && a.d<=to){ days.add(a.d); min += a.min||0; km += a.km||0; }
   return {days:days.size, gym:gymDays.size, sets, kg, min, km};
 }
@@ -1268,11 +1469,65 @@ function historyHTML(){
       ${daysWith.length>7?`<button class="btn sm" data-histmore style="margin-top:8px">${histMore?'Ver menos':`Ver los ${daysWith.length} días`}</button>`:''}`
       : `<div class="empty">No hay nada registrado en estos ${histRange} días.<br>Anota tus series en <b>Registrar</b> o una salida en <b>Registrar actividad</b>.</div>`}`;
 }
+/* ---------- Ficha de un día de entreno ----------
+   Todas las series de cada ejercicio, lo que quedó sin hacer, la comparación con la vez anterior
+   (por ejercicio y con la misma sesión) y la opción de corregir o agregar algo a ese día. */
+function exCompare(id, x, d){
+  const prev = lastBefore(id, d); if(!prev) return {txt:'Primera vez', c:'new'};
+  const a = bestSet(x), b = bestSet(prev), u = unitOf(id), when = fmtDate(prev.d);
+  if(a.m>0 || b.m>0){ const df = (a.m||0)-(b.m||0); return df ? {txt:`${df>0?'↑ +':'↓ −'}${fmtNum(Math.abs(df))} min vs ${when}`, c:df>0?'up':'down'} : {txt:`= igual que el ${when}`, c:''}; }
+  const dw = Math.round((inUnit(a,u)-inUnit(b,u))*100)/100;
+  if(dw) return {txt:`${dw>0?'↑ +':'↓ −'}${fmtNum(Math.abs(dw))} ${u} vs ${when}`, c:dw>0?'up':'down'};
+  const dr = (a.r||0)-(b.r||0);
+  return dr ? {txt:`${dr>0?'↑ +':'↓ −'}${Math.abs(dr)} reps vs ${when}`, c:dr>0?'up':'down'} : {txt:`= igual que el ${when}`, c:''};
+}
+function renderDay(){
+  const d = view.date, l = dayLog(d), t = new Date(d+'T12:00');
+  const w = l.wks[l.wks.length-1] || null;
+  const order = w ? [...w.ids, ...l.ex.map(o=>o.id).filter(id=>!w.ids.includes(id))] : l.ex.map(o=>o.id);
+  const exs = order.map(id=>l.ex.find(o=>o.id===id)).filter(Boolean);
+  const skipped = w ? w.ids.filter(id=>byId[id] && !l.ex.some(o=>o.id===id)) : [];
+  const sets = l.ex.reduce((a,o)=>a+o.x.s.length,0), vol = dayVolume(d);
+  /* la vez anterior que hiciste la misma sesión */
+  const key = w ? w.key : l.plans[0] && planInfo(l.plans[0].id) && l.plans[0].id;
+  const prevD = key ? [...new Set([...state.planLog.filter(x=>x.id===key).map(x=>x.d), ...state.workouts.filter(x=>x.key===key && x.end).map(x=>x.d)])].filter(x=>x<d).sort().pop() : null;
+  const pv = prevD ? dayVolume(prevD) : 0, dv = pv && vol ? Math.round((vol-pv)/pv*100) : null;
+  const inBlock = id => w && (state.links[linkKey(wkKey(w),id)] || state.links[linkKey(wkKey(w), w.ids[w.ids.indexOf(id)-1])]);
+  app.innerHTML = `<button class="back" data-dayback>← Volver</button>
+    <div class="top"><div><h1>${esc(l.gym ? dayTitle(l) : 'Día')}</h1>
+      <div class="sub">${WEEKDAY[t.getDay()]} ${fmtDate(d)}${w&&w.end?` · ${fmtTime(w.start)} a ${fmtTime(w.end)} (${fmtDur(w.end-w.start)})`:''}</div></div></div>
+    <div class="rx stats3">
+      <div><b>${exs.length}</b><span>Ejercicios</span></div><div><b>${sets}</b><span>Series</span></div><div><b>${vol?fmtKg(vol):'—'}</b><span>Volumen</span></div></div>
+    ${prevD ? `<p class="small ${dv>0?'up':dv<0?'down':''}" style="margin:0 0 10px">${dv===null?`La vez anterior: ${fmtDate(prevD)}.`
+      : dv>0 ? `↑ ${dv} % más volumen que la vez anterior (${fmtDate(prevD)}).` : dv<0 ? `↓ ${-dv} % menos volumen que la vez anterior (${fmtDate(prevD)}).` : `Mismo volumen que la vez anterior (${fmtDate(prevD)}).`}</p>` : ''}
+    <div class="day">
+      ${exs.map(o=>{ const c = exCompare(o.id, o.x, d); return `<button class="fl dx" data-dayex="${o.id}|${d}">
+        <span class="fn">${esc(dn(byId[o.id]))}${inBlock(o.id)?' <span class="pill gym">Superserie</span>':''}</span>
+        <span class="small">${o.x.s.map((s,i)=>`<span class="set">${esc(setText(s))}</span>`).join('')}</span>
+        <span class="small cmp ${c.c}">${esc(c.txt)}</span>
+        ${o.x.n?`<span class="small note">${esc(o.x.n)}</span>`:''}</button>`; }).join('')}
+      ${skipped.length ? `<h5 style="margin:12px 0 4px">Sin registrar</h5>${skipped.map(id=>`<div class="srow"><span class="info"><b class="muted">${esc(dn(byId[id]))}</b></span><button class="btn sm" data-dayex="${id}|${d}">Anotar</button></div>`).join('')}` : ''}
+      ${!exs.length && !skipped.length ? '<p class="small muted" style="margin:0">No hay series anotadas este día.</p>' : ''}
+    </div>
+    ${l.acts.length ? `<h2>Actividades</h2><div class="feed">${l.acts.map(a=>`<button class="fl act" data-actedit="${esc(a.id)}"><span class="fn">${esc(actName(a))}</span><span class="muted small">${esc(actText(a))}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>`).join('')}</div>` : ''}
+    <p class="small muted" style="margin:12px 0 0">Toca un ejercicio para corregir sus series.</p>
+    ${picker && picker.key==='h:'+d ? pickerHTML() : `<div class="row"><button class="btn sm" data-pick="h:${d}">＋ Agregar ejercicio a este día</button></div>`}`;
+}
+function openDay(d, from){
+  const back = from || (view.tab==='day' ? view.from : {...view, y:scrollY});
+  view = {tab:'day', date:d, from:back}; picker = null; render(); scrollTo(0,0);
+}
+/* abre un ejercicio para anotar o corregir las series de ese día */
+function openDayEx(id, d){
+  openDetail(id); logDate = d;
+  if(!entryFor(id, d)) addSet(id, true);
+  renderLog(id); const b = $('#logBox'); if(b) b.scrollIntoView({block:'start'});
+}
 function dayHTML(d, l){
   const t = new Date(d+'T12:00');
   const title = [...l.plans.map(p=>p.name), ...(l.gym && !l.plans.length ? ['Gimnasio'] : [])].join(' + ');
   return `<div class="fday" id="day-${d}">
-    <div class="fh"><b>${WEEKDAY[t.getDay()]} ${fmtDate(d)}</b><span class="muted small">${esc(title)}</span></div>
+    <button class="fh" data-dayview="${d}"><b>${WEEKDAY[t.getDay()]} ${fmtDate(d)}</b><span class="muted small">${esc(title)}</span><span class="small go">Ver detalle →</span></button>
     ${l.ex.map(o=>`<button class="fl" data-loghist="${o.id}"><span class="fn">${esc(dn(byId[o.id]))}</span><span class="muted small">${o.x.s.length} ${o.x.s.length===1?'serie':'series'} · mejor ${esc(setText(bestSet(o.x)))}</span>${o.x.n?`<span class="small note">${esc(o.x.n)}</span>`:''}</button>`).join('')}
     ${l.acts.map(a=>`<button class="fl act" data-actedit="${esc(a.id)}"><span class="fn"><span class="pill act">Actividad</span> ${esc(actName(a))}</span><span class="muted small">${esc(actText(a))}</span>${a.note?`<span class="small note">${esc(a.note)}</span>`:''}</button>`).join('')}
     ${!l.ex.length && !l.acts.length ? `<p class="small muted" style="margin:4px 0 0">Sesión terminada, sin series anotadas.</p>` : ''}
@@ -1511,14 +1766,30 @@ function openDetail(id, keep){
     <div class="tips"><h4>Consejos</h4><ul>${[...t.do, ...extra].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
     ${t.avoid.length?`<div class="tips warn"><h4>Errores comunes</h4><ul>${t.avoid.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
     <p class="muted small" style="margin-top:16px">Si sientes dolor (distinto de la fatiga muscular), detente. Consulta a un profesional si tienes lesiones. Animación © Gym visual.</p>`;
-  if($('#sheet').hidden){ $('#sheet').hidden = false; $('#sheetBox').scrollTop = 0; document.body.style.overflow = 'hidden'; }
+  if($('#sheet').hidden){ $('#sheet').hidden = false; $('#sheetBox').scrollTop = 0; lockPage(); }
   renderLog(id);
   const img = new Image(); img.className = 'gif'; img.alt = 'Animación de ' + dn(e); img.crossOrigin = 'anonymous';
   img.onload = () => { const box = $('#anim'); if(box && openId === id) box.replaceChildren(img); };
   img.onerror = () => { const m = $('#animMsg'); if(m && openId === id) m.textContent = 'No se pudo cargar la animación. Revisa tu conexión y vuelve a abrir el ejercicio.'; };
   img.src = gifUrl(e);
 }
-function closeDetail(){ if(openId) pruneLog(openId); $('#sheet').hidden = true; document.body.style.overflow = ''; openId = null; render(); }
+function closeDetail(){ if(openId) pruneLog(openId); $('#sheet').hidden = true; unlockPage(); openId = null; render(); }
+/* Con la ficha abierta, la página de fondo queda fija. En iPhone, overflow:hidden no basta: la página
+   igual se mueve, la barra de Safari cambia de alto y el menú de abajo queda dibujado a media pantalla.
+   Fijar el body (guardando el scroll) y ocultar el menú evita eso. */
+let lockedY = null;
+function lockPage(){
+  if(lockedY!==null) return;
+  lockedY = scrollY;
+  Object.assign(document.body.style, {position:'fixed', top:`-${lockedY}px`, left:'0', right:'0', overflow:'hidden'});
+  document.body.classList.add('sheet-open');
+}
+function unlockPage(){
+  if(lockedY===null) return;
+  Object.assign(document.body.style, {position:'', top:'', left:'', right:'', overflow:''});
+  document.body.classList.remove('sheet-open');
+  scrollTo(0, lockedY); lockedY = null;
+}
 
 /* ---------- Temporizador de descanso ----------
    Dura lo que indica tu objetivo (promedio del rango: 60–90 s -> 75 s). Usa la hora de término,
@@ -1574,7 +1845,7 @@ const PRESETS = {
   none:[]
 };
 document.addEventListener('click', ev=>{
-  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest],[data-swap],[data-swapto],[data-unswap],[data-swapsearch],[data-link],[data-splitopen],[data-split],[data-splitmake],[data-splitcancel],[data-splitundo],[data-stype],[data-settype],[data-adddrop],[data-deldrop],[data-nextmode]');
+  const el = ev.target.closest('[data-tab],[data-zone],[data-back],[data-target],[data-more],[data-open],[data-fav],[data-close],[data-addr],[data-addday],[data-rm],[data-up],[data-clear],[data-goal],[data-level],[data-eq],[data-preset],[data-backup],[data-media],[data-sub],[data-log],[data-loghist],[data-addset],[data-delset],[data-editsess],[data-delsess],[data-logall],[data-plopen],[data-plfinish],[data-plundo],[data-pledit],[data-plmove],[data-pldel],[data-pladd],[data-plweek],[data-plreview],[data-pladdex],[data-plfill],[data-plsort],[data-actnew],[data-acttype],[data-actedit],[data-actcancel],[data-actall],[data-actsave],[data-actdel],[data-pladdact],[data-hist],[data-histmore],[data-histday],[data-sfocus],[data-spadd],[data-unit],[data-punit],[data-rest],[data-swap],[data-swapto],[data-unswap],[data-swapsearch],[data-link],[data-splitopen],[data-split],[data-splitmake],[data-splitcancel],[data-splitundo],[data-stype],[data-settype],[data-adddrop],[data-deldrop],[data-nextmode],[data-wkstart],[data-wkopen],[data-wkfinish],[data-wkend],[data-wkdiscard],[data-pick],[data-pickclose],[data-padd],[data-dayview],[data-dayex],[data-dayback]');
   if(!el){ if(ev.target.id==='sheet') closeDetail(); return; }
   const d = el.dataset;
   if('fav' in d){
@@ -1585,7 +1856,7 @@ document.addEventListener('click', ev=>{
     if(openId) openDetail(openId, true); else render();
     return;
   }
-  if('tab' in d){ view = {tab:d.tab, zone:null, target:'', equip:'', q:'', limit:40}; confirmClear=false; swapPick=null; render(); scrollTo(0,0); return; }
+  if('tab' in d){ view = {tab:d.tab, zone:null, target:'', equip:'', q:'', limit:40}; confirmClear=false; swapPick=null; picker=null; wkFinish=false; wkDiscard=false; render(); scrollTo(0,0); return; }
   if('zone' in d){ Object.assign(view, {zone:d.zone, target:'', equip:'', q:'', limit:40}); render(); scrollTo(0,0); return; }
   if('back' in d){ view.zone = null; render(); return; }
   if('sfocus' in d){ sFocus = d.sfocus; render(); return; }
@@ -1626,7 +1897,11 @@ document.addEventListener('click', ev=>{
     save(); openDetail(openId, true); return;
   }
   if('swap' in d){ swapOpen = swapOpen===d.swap ? null : d.swap; swapForever = false; render(); return; }
-  if('unswap' in d){ delete state.subs[d.unswap]; save(); toast('Volviste al ejercicio original'); render(); return; }
+  if('unswap' in d){
+    const [key, id] = d.unswap.split('|'), w = wkById(key.slice(2)), l = listOf(key), i = l ? l.indexOf(id) : -1;
+    if(w && i>=0 && w.from[id]){ const o = w.from[id]; delete w.from[id]; replaceIn(key, l, i, o); save(); toast('Volviste al ejercicio original'); }
+    render(); return;
+  }
   if('swapsearch' in d){
     const [day, id, today] = d.swapsearch.split('|'), e = byId[id], p = Coach.patternOf(e);
     swapPick = {d:day, id, today};
@@ -1634,30 +1909,63 @@ document.addEventListener('click', ev=>{
     render(); scrollTo(0,0); toast('Elige uno y toca “Usar este”'); return;
   }
   if('swapto' in d){
-    const [day, id, alt, today] = d.swapto.split('|');
-    if(today==='1' && !swapForever){
-      /* solo hoy: se guarda el cambio con la fecha; los de días anteriores se borran */
-      const prefix = todayKey()+'|';
-      for(const k of Object.keys(state.subs)) if(!k.startsWith(prefix)) delete state.subs[k];
-      state.subs[`${todayKey()}|${day}|${id}`] = alt;
-      toast(`Hoy: ${dn(byId[alt])}`);
-    } else {
-      const l = listOf(day), i = l.indexOf(id);
-      if(i>=0){
-        if(l.includes(alt)){ unlinkRemoved(day, l, i); l.splice(i,1); }
-        else { if(state.links[linkKey(day,id)]){ delete state.links[linkKey(day,id)]; state.links[linkKey(day,alt)] = true; } l[i] = alt; }
-      }
-      delete state.subs[`${todayKey()}|${day}|${id}`];
-      toast(`Rutina actualizada: ${dn(byId[alt])}`);
-    }
+    const [day, id, alt] = d.swapto.split('|'), l = listOf(day), i = l ? l.indexOf(id) : -1;
+    if(i>=0) replaceIn(day, l, i, alt);
+    const w = isWk(day) ? wkById(day.slice(2)) : null;
+    if(w){
+      /* en un entreno: se recuerda cuál era el original, para mostrarlo y poder volver */
+      const o = w.from[id] || id; delete w.from[id];
+      if(alt!==o) w.from[alt] = o;
+      if(swapForever && w.key){ const t = listOf(w.key), j = t ? t.indexOf(o) : -1; if(j>=0) replaceIn(w.key, t, j, alt); delete w.from[alt]; }
+      toast(swapForever && w.key ? `Cambiado también en la rutina: ${dn(byId[alt])}` : `Hoy: ${dn(byId[alt])}`);
+    } else toast(`Rutina actualizada: ${dn(byId[alt])}`);
     save();
     const fromSearch = !!swapPick;
     swapOpen = null; swapPick = null; swapForever = false;
-    if(openId){ $('#sheet').hidden = true; document.body.style.overflow = ''; openId = null; }
-    if(fromSearch) view = {tab:'routine', zone:null, target:'', equip:'', q:'', limit:40};
+    if(openId){ $('#sheet').hidden = true; unlockPage(); openId = null; }
+    if(fromSearch) view = {tab:isWk(day) ? 'workout' : 'routine', zone:null, target:'', equip:'', q:'', limit:40};
     render(); return;
   }
   if('rm' in d){ const [day,id] = d.rm.split('|'); const l = listOf(day), i = l.indexOf(id); if(i>=0){ unlinkRemoved(day, l, i); l.splice(i,1); } save(); render(); return; }
+  /* entrenos */
+  if('wkstart' in d){
+    if(activeWk()){ view = {tab:'workout'}; render(); scrollTo(0,0); toast('Ya tienes un entreno en curso'); return; }
+    startWorkout(d.wkstart || null); picker = d.wkstart ? null : {key:wkKey(activeWk()), q:''};
+    wkFinish = false; wkDiscard = false; view = {tab:'workout'}; render(); scrollTo(0,0); toast('¡Vamos! Entreno empezado'); return;
+  }
+  if('wkopen' in d){ view = {tab:'workout'}; wkFinish = false; wkDiscard = false; render(); scrollTo(0,0); return; }
+  if('wkfinish' in d){ wkFinish = !wkFinish; wkDiscard = false; picker = null; render(); if(wkFinish){ const f = $('.finish'); if(f) f.scrollIntoView({block:'center'}); } return; }
+  if('wkend' in d){
+    const w = activeWk(); if(!w) return;
+    if(d.wkend==='rutina') applyToRoutine(w);
+    finishWorkout(w); wkFinish = false; picker = null;
+    openDay(w.d, {tab:'home', zone:null, target:'', equip:'', q:'', limit:40});
+    toast(d.wkend==='rutina' ? 'Entreno terminado y rutina actualizada' : 'Entreno terminado'); return;
+  }
+  if('wkdiscard' in d){
+    if(d.wkdiscard==='ask') wkDiscard = true;
+    else if(d.wkdiscard==='no') wkDiscard = false;
+    else { const w = activeWk(); state.workouts = state.workouts.filter(x=>x!==w); state.active = null; wkDiscard = false; picker = null; save(); view = {tab:'home', zone:null, target:'', equip:'', q:'', limit:40}; toast('Entreno descartado'); }
+    render(); return;
+  }
+  /* agregar ejercicio en el lugar */
+  if('pick' in d){ picker = {key:d.pick, q:''}; render(); const n = $('#pq'); if(n){ n.focus({preventScroll:true}); n.scrollIntoView({block:'center'}); } return; }
+  if('pickclose' in d){ picker = null; render(); return; }
+  if('padd' in d){
+    const id = d.padd, key = picker && picker.key; if(!key) return;
+    if(key.startsWith('h:')){ openDayEx(id, key.slice(2)); return; }
+    const l = listOf(key); if(!l) return;
+    const i = l.indexOf(id);
+    if(i>=0){ unlinkRemoved(key, l, i); l.splice(i,1); toast(`Quitado: ${dn(byId[id])}`); }
+    else { l.push(id); toast(`Agregado: ${dn(byId[id])}`); }
+    save(); const focused = document.activeElement && document.activeElement.id==='pq'; render();
+    if(focused){ const n = $('#pq'); n.focus({preventScroll:true}); }
+    return;
+  }
+  /* ficha de un día */
+  if('dayview' in d){ openDay(d.dayview); return; }
+  if('dayback' in d){ view = view.from || {tab:'home', zone:null, target:'', equip:'', q:'', limit:40}; picker = null; render(); scrollTo(0, view.y||0); return; }
+  if('dayex' in d){ const [id, day] = d.dayex.split('|'); openDayEx(id, day); return; }
   if('link' in d){
     const [day, id] = d.link.split('|'), k = linkKey(day, id);
     if(state.links[k]) delete state.links[k]; else state.links[k] = true;
@@ -1709,7 +2017,7 @@ document.addEventListener('click', ev=>{
   if('actall' in d){ actAll = !actAll; render(); return; }
   if('hist' in d){ histRange = +d.hist; histMore = false; render(); return; }
   if('histmore' in d){ histMore = !histMore; render(); return; }
-  if('histday' in d){ histMore = true; render(); const el = document.getElementById('day-'+d.histday); if(el) el.scrollIntoView({block:'start'}); return; }
+  if('histday' in d){ openDay(d.histday); return; }
   if('actsave' in d){
     const f = actForm;
     if(!(f.min>0) && !(f.km>0)){ actErr = 'Anota al menos los minutos o los kilómetros.'; render(); return; }
@@ -1881,16 +2189,21 @@ document.addEventListener('change', ev=>{
     pruneLog(openId); logDate = (t.value && t.value<=isoDate()) ? t.value : isoDate(); logDel = null; renderLog(openId);
   }
   else if(t.matches('[data-onlymine]')){ state.profile.onlyMine = t.checked; save(); render(); }
-  else if(t.matches('[data-done]')){
-    const prefix = todayKey()+'|';
-    for(const k of Object.keys(state.done)) if(!k.startsWith(prefix)) delete state.done[k];
-    if(t.checked) state.done[t.dataset.done] = true; else delete state.done[t.dataset.done];
-    save(); render();
+  else if(t.matches('[data-wdone]')){
+    /* false explícito = desmarcado aunque tenga series anotadas */
+    const [wid, id] = t.dataset.wdone.split('|'), w = wkById(wid);
+    if(w){ w.done[id] = t.checked; save(); render(); }
   }
 });
 let qTimer, nameTimer;
 document.addEventListener('input', ev=>{
   const t = ev.target;
+  if(t.matches('[data-pq]')){
+    /* solo se redibujan los resultados, así el teclado no se cierra */
+    if(!picker) return; picker.q = t.value; clearTimeout(qTimer);
+    qTimer = setTimeout(()=>{ const r = $('#pickRes'); if(r){ r.innerHTML = pickResHTML(); hydrateThumbs(r); } }, 150);
+    return;
+  }
   if(t.matches('[data-q]')){
     clearTimeout(qTimer);
     qTimer = setTimeout(()=>{ view.q = t.value; view.limit = 40; const pos = t.selectionStart; render(); const n = $('#q'); n.focus(); n.setSelectionRange(pos,pos); }, 200);
